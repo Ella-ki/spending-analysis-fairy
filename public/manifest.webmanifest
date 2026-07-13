@@ -1,0 +1,18 @@
+{
+  "name": "우리집 소비 대시보드",
+  "short_name": "우리집 소비",
+  "description": "Hyundai Card CSV uploads, monthly spending dashboard, and merchant learning for one household.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F3EA",
+  "theme_color": "#17201A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
