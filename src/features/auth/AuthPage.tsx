@@ -96,7 +96,6 @@ export function AuthPage() {
             <Sparkles className="h-4 w-4 text-lavender" aria-hidden />
             우리집 소비 흐름 정리
           </p>
-          <h1 className="mt-2 text-4xl font-bold tracking-normal">건빵과 교빵이 현금흐름 함께 정리</h1>
         </div>
 
         {step === "email" ? (
