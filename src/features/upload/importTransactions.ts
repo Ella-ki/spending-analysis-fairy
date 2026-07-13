@@ -37,7 +37,7 @@ type TransactionInsert = {
 export async function importHyundaiStatement({ file, householdId, userId }: ImportInput): Promise<ImportResult> {
   const parsedFile = await parseHyundaiStatementFile(file);
   const parsedRows = parsedFile.transactions;
-  const periodMonth = inferStatementMonth(parsedRows);
+  const periodMonth = parsedFile.statementMonth ?? inferStatementMonth(parsedRows);
   const checksum = parsedFile.checksum;
   const totalAmount = parsedRows.reduce((sum, row) => sum + row.amount, 0);
 

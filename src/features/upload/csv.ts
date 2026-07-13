@@ -16,6 +16,7 @@ export type ParsedStatementFile = {
   transactions: ParsedStatementTransaction[];
   checksum: string;
   sourceKind: "csv" | "xls-html" | "xls-xml" | "tabular-text";
+  statementMonth: string | null;
 };
 
 type ColumnMap = {
@@ -28,23 +29,24 @@ type ColumnMap = {
 };
 
 const aliases = {
-  date: ["date", "transactiondate", "이용일자", "거래일자", "사용일자", "승인일자", "매출일자", "이용일시"],
+  date: ["date", "transactiondate", "이용일", "이용일자", "거래일자", "사용일자", "승인일자", "매출일자", "이용일시"],
   merchant: ["merchant", "store", "가맹점명", "이용가맹점", "이용처", "사용처", "업체명", "상호", "가맹점"],
   amount: ["amount", "이용금액", "사용금액", "승인금액", "결제금액", "매출금액", "원화금액", "금액"],
   paymentType: ["paymenttype", "결제구분", "이용구분", "일시불할부", "일시불/할부", "매입구분", "결제방법"],
-  installment: ["installment", "할부", "할부개월", "할부기간", "할부개월수"],
+  installment: ["installment", "할부", "할부회차", "할부/회차", "할부개월", "할부기간", "할부개월수"],
   approvalNumber: ["approvalnumber", "승인번호", "승인no", "승인번호승인no", "승인번호no", "승인 no"],
 };
 
 export async function parseHyundaiStatementFile(file: File): Promise<ParsedStatementFile> {
   const buffer = await file.arrayBuffer();
   const checksum = await sha256ArrayBuffer(buffer);
-  const { rows, sourceKind } = parseStatementRows(file.name, buffer);
+  const { rows, sourceKind, statementMonth } = parseStatementRows(file.name, buffer);
 
   return {
     transactions: parseHyundaiRows(rows),
     checksum,
     sourceKind,
+    statementMonth,
   };
 }
 
@@ -55,6 +57,40 @@ export async function decodeCsvFile(file: File) {
 
 export function parseHyundaiCsv(text: string) {
   return parseHyundaiRows(parseDelimitedRows(text, ","));
+}
+
+function inferStatementMonthFromStatementText(text: string) {
+  const patterns = [
+    /(20\d{2})\s*년\s*(\d{1,2})\s*월\s*이용대금명세서/i,
+    /이용대금명세서[^0-9]{0,30}(20\d{2})[^0-9]{0,5}(\d{1,2})\s*월?/i,
+    /결제(?:예정)?일[^0-9]{0,30}(20\d{2})[^0-9]{0,5}(\d{1,2})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const month = match ? toValidMonthKey(match[1], match[2]) : null;
+    if (month) {
+      return month;
+    }
+  }
+
+  return null;
+}
+
+function inferStatementMonthFromFileName(fileName: string) {
+  const match = fileName.match(/(20\d{2})[-_.]?(0[1-9]|1[0-2])(?:[-_.]?(0[1-9]|[12]\d|3[01]))?/);
+  return match ? toValidMonthKey(match[1], match[2]) : null;
+}
+
+function toValidMonthKey(yearValue: string | undefined, monthValue: string | undefined) {
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || year < 2000 || year > 2100 || month < 1 || month > 12) {
+    return null;
+  }
+
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
 export function inferStatementMonth(rows: ParsedStatementTransaction[]) {
@@ -99,6 +135,7 @@ export function normalizeMerchantName(raw: string) {
 function parseStatementRows(fileName: string, buffer: ArrayBuffer): {
   rows: string[][];
   sourceKind: ParsedStatementFile["sourceKind"];
+  statementMonth: string | null;
 } {
   const bytes = new Uint8Array(buffer);
   const lowerName = fileName.toLowerCase();
@@ -114,20 +151,22 @@ function parseStatementRows(fileName: string, buffer: ArrayBuffer): {
   }
 
   const text = decodeStatementText(buffer);
+  const statementMonth = inferStatementMonthFromStatementText(text) ?? inferStatementMonthFromFileName(fileName);
   const trimmed = text.trimStart();
 
   if (/<table[\s>]/i.test(trimmed)) {
-    return { rows: parseHtmlTableRows(trimmed), sourceKind: "xls-html" };
+    return { rows: parseHtmlTableRows(trimmed), sourceKind: "xls-html", statementMonth };
   }
 
   if (/^<\?xml|<Workbook[\s>]/i.test(trimmed)) {
-    return { rows: parseXmlSpreadsheetRows(trimmed), sourceKind: "xls-xml" };
+    return { rows: parseXmlSpreadsheetRows(trimmed), sourceKind: "xls-xml", statementMonth };
   }
 
   const separator = chooseSeparator(text, lowerName);
   return {
     rows: parseDelimitedRows(text, separator),
     sourceKind: separator === "," ? "csv" : "tabular-text",
+    statementMonth,
   };
 }
 
