@@ -39,6 +39,7 @@ export type Transaction = {
   id: string;
   household_id: string;
   statement_id: string | null;
+  statement_period_month: string | null;
   transaction_date: string;
   merchant_raw: string;
   merchant_normalized: string;

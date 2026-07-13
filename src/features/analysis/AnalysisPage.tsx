@@ -1,11 +1,11 @@
-import { addMonths, isWithinMonth } from "../../lib/dates";
+import { addMonths, toMonthKey } from "../../lib/dates";
 import { formatKrw, signedKrw } from "../../lib/format";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { LoadingScreen } from "../../shared/components/LoadingScreen";
 import type { Transaction } from "../../shared/types";
 import { useHousehold } from "../household/useHousehold";
 import { MetricCard } from "../dashboard/MetricCard";
-import { useDashboardData } from "../dashboard/useDashboardData";
+import { getTransactionMonthKey, useDashboardData } from "../dashboard/useDashboardData";
 
 type DeltaRow = {
   name: string;
@@ -32,8 +32,8 @@ export function AnalysisPage() {
     return <EmptyState title="분석할 거래가 없습니다" description="현대카드 XLS 명세서를 가져오면 월별 비교와 카테고리 변화를 계산합니다." />;
   }
 
-  const previousMonth = addMonths(new Date(), -1);
-  const previousTransactions = data.transactions.filter((transaction) => isWithinMonth(transaction.transaction_date, previousMonth));
+  const previousMonthKey = toMonthKey(addMonths(new Date(), -1));
+  const previousTransactions = data.transactions.filter((transaction) => getTransactionMonthKey(transaction) === previousMonthKey);
   const categoryDeltas = buildCategoryDeltas(data.currentMonthTransactions, previousTransactions).slice(0, 6);
   const topMerchant = data.topMerchants[0];
   const currentCoffee = data.coffeeTrend[data.coffeeTrend.length - 1]?.amount ?? 0;
@@ -46,7 +46,7 @@ export function AnalysisPage() {
         <p className="text-sm font-semibold text-mint">Monthly Analysis</p>
         <h2 className="mt-1 text-3xl font-bold tracking-normal">이번 달 소비가 어떻게 달라졌는지.</h2>
         <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
-          특별 지출은 실제 소비에서 제외하고, 이전 달과 평균 대비 흐름을 빠르게 봅니다.
+          특별 지출은 실제 소비에서 제외하고, 명세서 월 기준으로 이전 달과 평균 대비 흐름을 빠르게 봅니다.
         </p>
       </section>
 

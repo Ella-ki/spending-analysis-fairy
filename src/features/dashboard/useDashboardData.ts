@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { addMonths, isWithinMonth, monthLabel, startOfMonth, toIsoDate, toMonthKey } from "../../lib/dates";
+import { addMonths, monthLabel, startOfMonth, toMonthKey } from "../../lib/dates";
 import { supabase } from "../../lib/supabase";
 import type { Goal, Transaction } from "../../shared/types";
 
@@ -37,10 +37,11 @@ export type DashboardData = {
   goal: Goal | null;
 };
 
-type TransactionRow = Omit<Transaction, "amount" | "installment_months"> & {
+type TransactionRow = Omit<Transaction, "amount" | "installment_months" | "statement_period_month"> & {
   amount: string | number;
   installment_months: string | number;
   categories?: Transaction["categories"] | Transaction["categories"][];
+  statements?: { period_month: string } | { period_month: string }[] | null;
 };
 
 type GoalRow = Omit<Goal, "target_amount"> & {
@@ -57,16 +58,16 @@ export function useDashboardData(householdId?: string) {
       }
 
       const currentMonth = startOfMonth(new Date());
-      const since = toIsoDate(addMonths(currentMonth, -11));
+      const since = `${toMonthKey(addMonths(currentMonth, -11))}-01`;
 
       const [transactionsResult, goalResult] = await Promise.all([
         supabase
           .from("transactions")
           .select(
-            "id,household_id,statement_id,transaction_date,merchant_raw,merchant_normalized,amount,payment_type,installment_months,approval_number,category_id,special_flag,is_fixed,categories(id,name,color,icon)",
+            "id,household_id,statement_id,transaction_date,merchant_raw,merchant_normalized,amount,payment_type,installment_months,approval_number,category_id,special_flag,is_fixed,categories(id,name,color,icon),statements!inner(period_month)",
           )
           .eq("household_id", householdId)
-          .gte("transaction_date", since)
+          .gte("statements.period_month", since)
           .order("transaction_date", { ascending: false }),
         supabase
           .from("goals")
@@ -95,9 +96,11 @@ export function useDashboardData(householdId?: string) {
 }
 
 function buildDashboardData(transactions: Transaction[], goal: Goal | null, currentMonth: Date): DashboardData {
-  const currentMonthTransactions = transactions.filter((transaction) => isWithinMonth(transaction.transaction_date, currentMonth));
+  const currentMonthKey = toMonthKey(currentMonth);
+  const currentMonthTransactions = transactions.filter((transaction) => getTransactionMonthKey(transaction) === currentMonthKey);
   const previousMonth = addMonths(currentMonth, -1);
-  const previousMonthTransactions = transactions.filter((transaction) => isWithinMonth(transaction.transaction_date, previousMonth));
+  const previousMonthKey = toMonthKey(previousMonth);
+  const previousMonthTransactions = transactions.filter((transaction) => getTransactionMonthKey(transaction) === previousMonthKey);
   const targetAmount = goal?.target_amount ?? 2_000_000;
 
   const totalCardBill = sumAmount(currentMonthTransactions);
@@ -144,12 +147,29 @@ function buildDashboardData(transactions: Transaction[], goal: Goal | null, curr
 }
 
 function normalizeTransactions(rows: TransactionRow[]): Transaction[] {
-  return rows.map((row) => ({
-    ...row,
-    amount: Number(row.amount),
-    installment_months: Number(row.installment_months),
-    categories: Array.isArray(row.categories) ? (row.categories[0] ?? null) : (row.categories ?? null),
-  }));
+  return rows.map((row) => {
+    const { categories, statements, ...transaction } = row;
+
+    return {
+      ...transaction,
+      amount: Number(row.amount),
+      installment_months: Number(row.installment_months),
+      statement_period_month: normalizeStatementPeriodMonth(statements),
+      categories: Array.isArray(categories) ? (categories[0] ?? null) : (categories ?? null),
+    };
+  });
+}
+
+function normalizeStatementPeriodMonth(statements: TransactionRow["statements"]) {
+  if (Array.isArray(statements)) {
+    return statements[0]?.period_month ?? null;
+  }
+
+  return statements?.period_month ?? null;
+}
+
+export function getTransactionMonthKey(transaction: Transaction) {
+  return transaction.statement_period_month ? toMonthKey(transaction.statement_period_month) : toMonthKey(transaction.transaction_date);
 }
 
 function normalizeGoal(row: GoalRow): Goal {
@@ -168,7 +188,7 @@ function aggregateMonthly(transactions: Transaction[], currentMonth: Date, predi
   const amounts = new Map(months.map((month) => [month, 0]));
 
   transactions.filter(predicate).forEach((transaction) => {
-    const month = toMonthKey(transaction.transaction_date);
+    const month = getTransactionMonthKey(transaction);
     if (amounts.has(month)) {
       amounts.set(month, (amounts.get(month) ?? 0) + transaction.amount);
     }
@@ -208,10 +228,7 @@ function aggregateByMerchant(transactions: Transaction[]) {
 }
 
 function averageMonthlySpending(transactions: Transaction[], currentMonth: Date) {
-  const months = Array.from({ length: 6 }, (_, index) => toMonthKey(addMonths(currentMonth, index - 5)));
-  const totals = aggregateMonthly(transactions, currentMonth, (transaction) => !transaction.special_flag).filter((datum) =>
-    months.includes(datum.name.replace(".", "-")),
-  );
+  const totals = aggregateMonthly(transactions, currentMonth, (transaction) => !transaction.special_flag);
 
   const nonZero = totals.filter((datum) => datum.amount > 0);
   if (nonZero.length === 0) {
