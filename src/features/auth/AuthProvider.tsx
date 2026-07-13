@@ -7,6 +7,7 @@ type AuthContextValue = {
   session: Session | null;
   isLoading: boolean;
   signInWithEmail: (email: string) => Promise<void>;
+  verifyEmailOtp: (email: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -52,8 +53,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: window.location.origin,
+            shouldCreateUser: true,
           },
+        });
+
+        if (error) {
+          throw error;
+        }
+      },
+      async verifyEmailOtp(email: string, token: string) {
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token,
+          type: "email",
         });
 
         if (error) {

@@ -1,25 +1,58 @@
 import { FormEvent, useState } from "react";
-import { Mail, Sparkles, WandSparkles } from "lucide-react";
+import { KeyRound, Mail, Sparkles, WandSparkles } from "lucide-react";
 import { Button } from "../../shared/components/Button";
 import { useAuth } from "./AuthProvider";
 
+type AuthStep = "email" | "code";
+type AuthStatus = "idle" | "sending" | "sent" | "verifying";
+
 export function AuthPage() {
-  const { signInWithEmail } = useAuth();
+  const { signInWithEmail, verifyEmailOtp } = useAuth();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [token, setToken] = useState("");
+  const [step, setStep] = useState<AuthStep>("email");
+  const [status, setStatus] = useState<AuthStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setStatus("sending");
 
     try {
-      await signInWithEmail(email);
+      await signInWithEmail(email.trim());
+      setStep("code");
       setStatus("sent");
     } catch (caught) {
       setStatus("idle");
-      setError(caught instanceof Error ? caught.message : "로그인 메일을 보낼 수 없습니다.");
+      setError(caught instanceof Error ? caught.message : "인증 코드를 보낼 수 없습니다.");
+    }
+  }
+
+  async function handleCodeSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setStatus("verifying");
+
+    try {
+      await verifyEmailOtp(email.trim(), token.replace(/\D/g, ""));
+    } catch (caught) {
+      setStatus("sent");
+      setError(caught instanceof Error ? caught.message : "인증 코드를 확인할 수 없습니다.");
+    }
+  }
+
+  async function resendCode() {
+    setError(null);
+    setStatus("sending");
+
+    try {
+      await signInWithEmail(email.trim());
+      setToken("");
+      setStatus("sent");
+    } catch (caught) {
+      setStatus("sent");
+      setError(caught instanceof Error ? caught.message : "인증 코드를 다시 보낼 수 없습니다.");
     }
   }
 
@@ -38,49 +71,104 @@ export function AuthPage() {
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold text-mint">
             <Sparkles className="h-4 w-4 text-lavender" aria-hidden />
-            30초 월간 소비 확인
+            홈화면 앱에서 바로 로그인
           </p>
-          <h1 className="mt-2 text-4xl font-bold tracking-normal">카드값 흐름을 요정처럼 가볍게 정리해요.</h1>
+          <h1 className="mt-2 text-4xl font-bold tracking-normal">메일의 6자리 코드를 여기에 입력해요.</h1>
           <p className="mt-4 text-sm leading-6 text-stone-600 dark:text-stone-300">
-            이메일 링크로 로그인하고, 부부가 같은 household 데이터를 함께 확인합니다.
+            링크를 Safari로 열지 않고, 홈화면 앱 안에서 인증을 끝내 로그인 상태를 유지합니다.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="fairy-card rounded-lg border p-4">
-          <label className="text-sm font-semibold" htmlFor="email">
-            이메일
-          </label>
-          <div className="mt-2 flex items-center gap-2 rounded-lg border border-lavender/25 bg-white/70 px-3 dark:border-lavender/20 dark:bg-neutral-950/70">
-            <Mail className="h-5 w-5 text-lavender" aria-hidden />
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              className="min-h-12 w-full bg-transparent text-base outline-none placeholder:text-stone-400"
-            />
-          </div>
+        {step === "email" ? (
+          <form onSubmit={handleEmailSubmit} className="fairy-card rounded-lg border p-4">
+            <label className="text-sm font-semibold" htmlFor="email">
+              이메일
+            </label>
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-lavender/25 bg-white/70 px-3 dark:border-lavender/20 dark:bg-neutral-950/70">
+              <Mail className="h-5 w-5 text-lavender" aria-hidden />
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                className="min-h-12 w-full bg-transparent text-base outline-none placeholder:text-stone-400"
+              />
+            </div>
 
-          <Button className="mt-4 w-full" type="submit" disabled={status === "sending"}>
-            {status === "sending" ? "메일 보내는 중" : "로그인 링크 받기"}
-          </Button>
+            <Button className="mt-4 w-full" type="submit" disabled={status === "sending"}>
+              {status === "sending" ? "인증 코드 보내는 중" : "인증 코드 받기"}
+            </Button>
 
-          {status === "sent" ? (
-            <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-              메일함에서 로그인 링크를 열어 주세요.
-            </p>
-          ) : null}
+            {error ? <ErrorMessage message={error} /> : null}
+          </form>
+        ) : (
+          <form onSubmit={handleCodeSubmit} className="fairy-card rounded-lg border p-4">
+            <div className="rounded-lg border border-lavender/20 bg-white/65 p-3 text-sm text-stone-600 dark:bg-neutral-950/65 dark:text-stone-300">
+              <span className="font-semibold text-ink dark:text-stone-50">{email}</span> 로 보낸 6자리 코드를 입력해 주세요.
+            </div>
 
-          {error ? (
-            <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-200">
-              {error}
-            </p>
-          ) : null}
-        </form>
+            <label className="mt-4 block text-sm font-semibold" htmlFor="token">
+              인증 코드
+            </label>
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-lavender/25 bg-white/70 px-3 dark:border-lavender/20 dark:bg-neutral-950/70">
+              <KeyRound className="h-5 w-5 text-lavender" aria-hidden />
+              <input
+                id="token"
+                type="text"
+                required
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={token}
+                onChange={(event) => setToken(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="123456"
+                className="min-h-12 w-full bg-transparent text-center text-2xl font-bold tracking-[0.35em] outline-none placeholder:text-stone-300"
+              />
+            </div>
+
+            <Button className="mt-4 w-full" type="submit" disabled={status === "verifying" || token.length !== 6}>
+              {status === "verifying" ? "확인 중" : "로그인하기"}
+            </Button>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={resendCode}
+                disabled={status === "sending"}
+                className="min-h-10 rounded-lg border border-lavender/25 bg-white/70 px-3 text-sm font-semibold text-ink disabled:opacity-50 dark:bg-neutral-950/70 dark:text-stone-50"
+              >
+                {status === "sending" ? "재전송 중" : "코드 다시 받기"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("email");
+                  setStatus("idle");
+                  setToken("");
+                  setError(null);
+                }}
+                className="min-h-10 rounded-lg border border-lavender/25 bg-white/70 px-3 text-sm font-semibold text-ink dark:bg-neutral-950/70 dark:text-stone-50"
+              >
+                이메일 바꾸기
+              </button>
+            </div>
+
+            {error ? <ErrorMessage message={error} /> : null}
+          </form>
+        )}
       </section>
     </main>
+  );
+}
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-200">
+      {message}
+    </p>
   );
 }
