@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import { UploadCloud } from "lucide-react";
+import { Sparkles, UploadCloud } from "lucide-react";
 import { useCategories } from "../categories/useCategories";
 import { useHousehold } from "../household/useHousehold";
 import { TransactionCategoryPicker } from "../merchantRules/TransactionCategoryPicker";
@@ -52,7 +52,7 @@ export function DashboardPage() {
           action={
             <Link
               to="/upload"
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white dark:bg-stone-50 dark:text-ink"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-gradient-to-br from-mint to-lavender px-4 py-2 text-sm font-semibold text-white shadow-fairy"
             >
               명세서 업로드
             </Link>
@@ -71,31 +71,31 @@ export function DashboardPage() {
       <section>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-mint">이번 달</p>
+            <p className="flex items-center gap-2 text-sm font-semibold text-mint"><Sparkles className="h-4 w-4 text-lavender" aria-hidden />이번 달</p>
             <h2 className="mt-1 text-3xl font-bold tracking-normal">이번 달 소비 상태</h2>
           </div>
           <Link
             to="/upload"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-ink px-3 text-sm font-semibold text-white dark:bg-stone-50 dark:text-ink"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-br from-mint to-lavender px-3 text-sm font-semibold text-white shadow-fairy"
           >
             <UploadCloud className="h-5 w-5" aria-hidden />
             XLS
           </Link>
         </div>
 
-        <div className="mt-5 rounded-lg border border-stone-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="fairy-card mt-5 rounded-lg border p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">목표 진행률</p>
               <p className="mt-1 text-xl font-bold">{formatKrw(metrics.actualSpending)} / {formatKrw(metrics.targetAmount)}</p>
             </div>
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink text-xl font-bold text-white dark:bg-stone-50 dark:text-ink">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-gold to-petal text-xl font-bold text-white shadow-fairy">
               {metrics.monthlyScore}
             </div>
           </div>
           <div className="mt-4 h-3 overflow-hidden rounded-full bg-stone-200 dark:bg-neutral-800">
             <div
-              className={`h-full rounded-full ${metrics.targetProgress <= 1 ? "bg-mint" : "bg-coral"}`}
+              className={`h-full rounded-full ${metrics.targetProgress <= 1 ? "bg-gradient-to-r from-mint to-lavender" : "bg-coral"}`}
               style={{ width: `${Math.min(metrics.targetProgress, 1.25) * 100}%` }}
             />
           </div>
@@ -106,19 +106,19 @@ export function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <MetricCard label="Total Card Bill" value={formatKrw(metrics.totalCardBill, true)} />
-        <MetricCard label="Actual Spending" value={formatKrw(metrics.actualSpending, true)} tone={metrics.remainingBudget >= 0 ? "good" : "bad"} />
-        <MetricCard label="Installment Amount" value={formatKrw(metrics.installmentAmount, true)} />
-        <MetricCard label="Fixed Expenses" value={formatKrw(metrics.fixedExpenses, true)} />
-        <MetricCard label="Variable Expenses" value={formatKrw(metrics.variableExpenses, true)} />
+        <MetricCard label="총 카드값" value={formatKrw(metrics.totalCardBill, true)} />
+        <MetricCard label="실제 소비" value={formatKrw(metrics.actualSpending, true)} tone={metrics.remainingBudget >= 0 ? "good" : "bad"} />
+        <MetricCard label="할부 금액" value={formatKrw(metrics.installmentAmount, true)} />
+        <MetricCard label="고정비" value={formatKrw(metrics.fixedExpenses, true)} />
+        <MetricCard label="변동비" value={formatKrw(metrics.variableExpenses, true)} />
         <MetricCard
-          label="Remaining Budget"
+          label="남은 예산"
           value={formatKrw(metrics.remainingBudget, true)}
           tone={metrics.remainingBudget >= 0 ? "good" : "bad"}
         />
       </section>
 
-      <Suspense fallback={<div className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-500 dark:border-neutral-800 dark:bg-neutral-900">차트를 불러오는 중</div>}>
+      <Suspense fallback={<div className="fairy-card rounded-lg border p-4 text-sm text-stone-500">차트를 불러오는 중</div>}>
         <DashboardCharts
           trend={data.trend}
           categoryBreakdown={data.categoryBreakdown}
@@ -132,7 +132,7 @@ export function DashboardPage() {
 
       <section>
         <div className="mb-3">
-          <h3 className="text-lg font-bold tracking-normal">Merchant rule learning</h3>
+          <h3 className="text-lg font-bold tracking-normal">가맹점 규칙 학습</h3>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
             카테고리를 바꾸면 같은 가맹점의 다음 가져오기에 자동 적용됩니다.
           </p>
@@ -140,7 +140,7 @@ export function DashboardPage() {
 
         <div className="flex flex-col gap-2">
           {recentTransactions.map((transaction) => (
-            <article key={transaction.id} className="rounded-lg border border-stone-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <article key={transaction.id} className="fairy-card rounded-lg border p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-semibold">{transaction.merchant_normalized}</p>

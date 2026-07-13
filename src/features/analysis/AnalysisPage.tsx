@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { addMonths, toMonthKey } from "../../lib/dates";
 import { formatKrw, signedKrw } from "../../lib/format";
 import { EmptyState } from "../../shared/components/EmptyState";
@@ -43,7 +44,7 @@ export function AnalysisPage() {
   return (
     <div className="flex flex-col gap-7">
       <section>
-        <p className="text-sm font-semibold text-mint">월간 분석</p>
+        <p className="flex items-center gap-2 text-sm font-semibold text-mint"><Sparkles className="h-4 w-4 text-lavender" aria-hidden />월간 분석</p>
         <h2 className="mt-1 text-3xl font-bold tracking-normal">이번 달 소비가 어떻게 달라졌는지.</h2>
         <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
           특별 지출은 실제 소비에서 제외하고, 명세서 월 기준으로 이전 달과 평균 대비 흐름을 빠르게 봅니다.
@@ -84,7 +85,7 @@ export function AnalysisPage() {
         <h3 className="text-lg font-bold tracking-normal">카테고리 변화</h3>
         <div className="mt-3 flex flex-col gap-2">
           {categoryDeltas.map((row) => (
-            <article key={row.name} className="rounded-lg border border-stone-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <article key={row.name} className="fairy-card rounded-lg border p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold">{row.name}</p>
@@ -104,8 +105,8 @@ export function AnalysisPage() {
 
 function AnalysisCard({ title, body }: { title: string; body: string }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-      <p className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">{title}</p>
+    <article className="fairy-card rounded-lg border p-4">
+      <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">{title}</p>
       <p className="mt-2 text-sm leading-6 text-stone-700 dark:text-stone-200">{body}</p>
     </article>
   );

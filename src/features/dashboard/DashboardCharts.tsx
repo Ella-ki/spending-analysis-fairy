@@ -32,7 +32,7 @@ type DashboardChartsProps = {
 export function DashboardCharts(props: DashboardChartsProps) {
   return (
     <section className="flex flex-col gap-4">
-      <ChartCard title="Monthly spending trend">
+      <ChartCard title="월별 소비 흐름">
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={props.trend} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
             <defs>
@@ -50,7 +50,7 @@ export function DashboardCharts(props: DashboardChartsProps) {
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Category pie chart">
+      <ChartCard title="카테고리 비중">
         <ResponsiveContainer width="100%" height={240}>
           <PieChart>
             <Pie data={props.categoryBreakdown} dataKey="amount" nameKey="name" innerRadius={56} outerRadius={88} paddingAngle={2}>
@@ -64,19 +64,19 @@ export function DashboardCharts(props: DashboardChartsProps) {
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Top merchants">
+      <ChartCard title="자주 쓴 가맹점">
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={props.topMerchants} layout="vertical" margin={{ left: 18, right: 8, top: 8, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
             <XAxis type="number" hide />
             <YAxis type="category" dataKey="name" width={92} tickLine={false} axisLine={false} fontSize={12} />
             <Tooltip formatter={(value) => formatKrw(Number(value))} />
-            <Bar dataKey="amount" fill="#4D8BC8" radius={[0, 6, 6, 0]} />
+            <Bar dataKey="amount" fill="#A78BFA" radius={[0, 6, 6, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Top categories">
+      <ChartCard title="상위 카테고리">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={props.topCategories} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -92,30 +92,30 @@ export function DashboardCharts(props: DashboardChartsProps) {
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Installment trend">
+      <ChartCard title="할부 흐름">
         <ResponsiveContainer width="100%" height={210}>
           <LineChart data={props.installmentTrend} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
             <YAxis hide />
             <Tooltip formatter={(value) => formatKrw(Number(value))} />
-            <Line type="monotone" dataKey="amount" stroke="#E56B5D" strokeWidth={3} dot={false} />
+            <Line type="monotone" dataKey="amount" stroke="#F4A7B9" strokeWidth={3} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <ChartCard title="Coffee trend">
+        <ChartCard title="커피 흐름">
           <ResponsiveContainer width="100%" height={190}>
             <LineChart data={props.coffeeTrend} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
               <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
               <YAxis hide />
               <Tooltip formatter={(value) => formatKrw(Number(value))} />
-              <Line type="monotone" dataKey="amount" stroke="#8B5E3C" strokeWidth={3} dot={false} />
+              <Line type="monotone" dataKey="amount" stroke="#D7A83F" strokeWidth={3} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
-        <ChartCard title="Coupang trend">
+        <ChartCard title="쿠팡 흐름">
           <ResponsiveContainer width="100%" height={190}>
             <LineChart data={props.coupangTrend} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
               <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
@@ -132,8 +132,8 @@ export function DashboardCharts(props: DashboardChartsProps) {
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-      <h3 className="text-base font-bold tracking-normal">{title}</h3>
+    <article className="fairy-card rounded-lg border p-4">
+      <h3 className="text-base font-bold tracking-normal text-ink dark:text-stone-50">{title}</h3>
       <div className="mt-3">{children}</div>
     </article>
   );

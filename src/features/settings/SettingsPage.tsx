@@ -41,10 +41,10 @@ export function SettingsPage() {
         <h2 className="mt-1 text-3xl font-bold tracking-normal">MVP v1 범위를 명확하게 유지합니다.</h2>
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <section className="fairy-card rounded-lg border p-4">
         <h3 className="text-base font-bold tracking-normal">가계부</h3>
         <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{membership?.household.name}</p>
-        <div className="mt-3 rounded-lg bg-stone-100 p-3 font-mono text-xs text-stone-700 dark:bg-neutral-950 dark:text-stone-200">
+        <div className="mt-3 rounded-lg border border-lavender/20 bg-white/65 p-3 font-mono text-xs text-stone-700 dark:bg-neutral-950/65 dark:text-stone-200">
           {membership?.household.join_code}
         </div>
         <Button
@@ -58,7 +58,7 @@ export function SettingsPage() {
         </Button>
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <section className="fairy-card rounded-lg border p-4">
         <h3 className="text-base font-bold tracking-normal">화면 테마</h3>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {(["system", "light", "dark"] as const).map((option) => (
@@ -79,11 +79,11 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <section className="fairy-card rounded-lg border p-4">
         <h3 className="text-base font-bold tracking-normal">준비됨, 아직 구현하지 않음</h3>
         <div className="mt-3 flex flex-col gap-2">
           {futureFeatures.map((feature) => (
-            <div key={feature} className="flex items-center justify-between rounded-lg bg-stone-100 px-3 py-2 text-sm dark:bg-neutral-950">
+            <div key={feature} className="flex items-center justify-between rounded-lg border border-lavender/15 bg-white/65 px-3 py-2 text-sm dark:bg-neutral-950/65">
               <span className="font-medium">{feature}</span>
               <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">보류</span>
             </div>

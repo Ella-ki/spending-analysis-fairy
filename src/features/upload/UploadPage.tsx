@@ -1,6 +1,6 @@
 import { ChangeEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, FileUp, UploadCloud } from "lucide-react";
+import { CheckCircle2, FileUp, Sparkles, UploadCloud } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider";
 import { useHousehold } from "../household/useHousehold";
 import { Button } from "../../shared/components/Button";
@@ -76,16 +76,16 @@ export function UploadPage() {
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <p className="text-sm font-semibold text-mint">명세서 업로드</p>
+        <p className="flex items-center gap-2 text-sm font-semibold text-mint"><Sparkles className="h-4 w-4 text-lavender" aria-hidden />명세서 업로드</p>
         <h2 className="mt-1 text-3xl font-bold tracking-normal">현대카드 이용명세서 XLS를 올리면 끝.</h2>
         <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
           현대카드에서 내려받은 XLS 명세서를 읽어 거래일, 가맹점, 금액, 결제 방식, 할부, 승인번호를 정규화하고 기존 merchant rule로 자동 분류합니다.
         </p>
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
-        <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-center dark:border-neutral-700 dark:bg-neutral-950">
-          <FileUp className="h-8 w-8 text-mint" aria-hidden />
+      <section className="fairy-card rounded-lg border p-4">
+        <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-lavender/30 bg-white/65 px-4 py-6 text-center dark:border-lavender/20 dark:bg-neutral-950/60">
+          <FileUp className="h-8 w-8 text-lavender" aria-hidden />
           <span className="text-sm font-semibold">{fileLabel}</span>
           <span className="text-xs text-stone-500 dark:text-stone-400">
             현대카드 XLS를 우선 지원하고, CSV도 보조로 지원합니다.
@@ -116,7 +116,7 @@ export function UploadPage() {
       </section>
 
       {result ? (
-        <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+        <section className="rounded-lg border border-emerald-200 bg-emerald-50/90 p-4 text-emerald-900 shadow-sm dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" aria-hidden />
             <h3 className="font-semibold">{result.status === "refreshed" ? "명세서를 새 기준으로 다시 계산했어요" : result.status === "duplicate" ? "이미 가져온 명세서예요" : "가져오기가 완료됐어요"}</h3>
@@ -150,7 +150,7 @@ export function UploadPage() {
         {statementsQuery.data && statementsQuery.data.length > 0 ? (
           <div className="flex flex-col gap-2">
             {statementsQuery.data.map((statement) => (
-              <article key={statement.id} className="rounded-lg border border-stone-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <article key={statement.id} className="fairy-card rounded-lg border p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold">{statement.original_file_name}</p>

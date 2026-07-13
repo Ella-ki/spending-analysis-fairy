@@ -59,7 +59,7 @@ export function HouseholdSetup() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-lg border border-stone-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+        <form onSubmit={handleSubmit} className="fairy-card rounded-lg border p-4">
           {mode === "create" ? (
             <label className="block text-sm font-semibold">
               가계부 이름

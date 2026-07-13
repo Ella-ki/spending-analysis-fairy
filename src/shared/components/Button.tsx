@@ -6,9 +6,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variants = {
-  primary: "bg-ink text-white hover:bg-neutral-800 dark:bg-stone-50 dark:text-ink dark:hover:bg-stone-200",
+  primary: "bg-gradient-to-br from-mint to-lavender text-white shadow-fairy hover:brightness-105",
   secondary:
-    "border border-stone-200 bg-white text-ink hover:bg-stone-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-stone-50 dark:hover:bg-neutral-800",
+    "border border-lavender/25 bg-white/80 text-ink hover:bg-white dark:border-lavender/20 dark:bg-neutral-900 dark:text-stone-50 dark:hover:bg-neutral-800",
   ghost: "text-ink hover:bg-stone-100 dark:text-stone-50 dark:hover:bg-neutral-900",
   danger: "bg-coral text-white hover:bg-red-600",
 };
