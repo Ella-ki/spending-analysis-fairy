@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, UploadCloud } from "lucide-react";
+import { Banknote, Sparkles, UploadCloud, WandSparkles } from "lucide-react";
 import { useCategories } from "../categories/useCategories";
 import { useHousehold } from "../household/useHousehold";
 import { TransactionCategoryPicker } from "../merchantRules/TransactionCategoryPicker";
@@ -156,4 +156,30 @@ export function DashboardPage() {
       </section>
     </div>
   );
+}
+function buildAiInsights(data: NonNullable<ReturnType<typeof useDashboardData>["data"]>) {
+  const metrics = data.metrics;
+  const insights: string[] = [];
+
+  if (metrics.incomeTotal > 0) {
+    insights.push(
+      `이번 달 월급 ${formatKrw(metrics.incomeTotal)} 중 카드 소비와 주택 대출을 반영하면 ${formatKrw(metrics.cashAfterLoans)}이 남는 흐름입니다.`,
+    );
+  } else {
+    insights.push("월급 입금액을 입력하면 카드값과 주택 대출을 뺀 실제 잔여 현금을 계산할 수 있어요.");
+  }
+
+  if (metrics.futureInstallmentTotal > 0) {
+    insights.push(`앞으로 3개월 안에 잡힌 할부 예정액은 ${formatKrw(metrics.futureInstallmentTotal)}입니다. 큰 지출 전에는 이 금액을 먼저 고정비처럼 보고 판단하는 편이 좋아요.`);
+  } else {
+    insights.push("현재 데이터 기준으로 다음 3개월 할부 부담은 크지 않습니다.");
+  }
+
+  if (metrics.targetProgress > 1) {
+    insights.push(`생활비 목표를 ${formatPercent(metrics.targetProgress)} 사용했습니다. 다음 소비는 변동비보다 고정/대출 이후 잔액 기준으로 보는 게 안전합니다.`);
+  } else {
+    insights.push(`생활비 목표 대비 ${formatPercent(metrics.targetProgress)} 사용 중입니다. 아직 목표 안쪽에 있어요.`);
+  }
+
+  return insights;
 }

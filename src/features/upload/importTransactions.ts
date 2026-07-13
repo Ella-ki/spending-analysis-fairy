@@ -27,6 +27,8 @@ type TransactionInsert = {
   amount: number;
   payment_type: string;
   installment_months: number;
+  installment_current_round: number | null;
+  installment_remaining_amount: number | null;
   approval_number: string | null;
   category_id: string | null;
   special_flag: SpecialFlag | null;
@@ -235,6 +237,8 @@ async function buildTransactionInserts(input: {
         amount: row.amount,
         payment_type: row.paymentType,
         installment_months: row.installmentMonths,
+        installment_current_round: row.installmentCurrentRound,
+        installment_remaining_amount: row.installmentRemainingAmount,
         approval_number: row.approvalNumber,
         category_id: classification.categoryId,
         special_flag: classification.specialFlag,

@@ -1,4 +1,4 @@
-import { BarChart3, Home, Settings, Sparkles, UploadCloud } from "lucide-react";
+import { Banknote, BarChart3, Home, Settings, Sparkles, UploadCloud } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useHousehold } from "../../features/household/useHousehold";
 
@@ -6,6 +6,7 @@ const navItems = [
   { to: "/", label: "홈", icon: Home },
   { to: "/upload", label: "업로드", icon: UploadCloud },
   { to: "/analysis", label: "분석", icon: BarChart3 },
+  { to: "/cashflow", label: "현금", icon: Banknote },
   { to: "/settings", label: "설정", icon: Settings },
 ];
 
@@ -36,7 +37,7 @@ export function AppShell() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-lavender/20 bg-white/92 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-[0_-10px_30px_rgba(47,143,107,0.08)] backdrop-blur dark:border-lavender/20 dark:bg-neutral-950/92">
-        <div className="mx-auto grid max-w-3xl grid-cols-4 gap-1">
+        <div className="mx-auto grid max-w-3xl grid-cols-5 gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (

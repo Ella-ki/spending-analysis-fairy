@@ -8,6 +8,7 @@ import { ConfigMissing } from "../shared/components/ConfigMissing";
 import { LoadingScreen } from "../shared/components/LoadingScreen";
 import { env } from "../lib/env";
 import { AnalysisPage } from "../features/analysis/AnalysisPage";
+import { CashflowPage } from "../features/cashflow/CashflowPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { UploadPage } from "../features/upload/UploadPage";
@@ -56,6 +57,7 @@ function AppRoutes() {
           <Route index element={<DashboardPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
+          <Route path="/cashflow" element={<CashflowPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

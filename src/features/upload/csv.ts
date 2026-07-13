@@ -7,6 +7,8 @@ export type ParsedStatementTransaction = {
   amount: number;
   paymentType: string;
   installmentMonths: number;
+  installmentCurrentRound: number | null;
+  installmentRemainingAmount: number | null;
   approvalNumber: string | null;
 };
 
@@ -27,6 +29,7 @@ type ColumnMap = {
   paymentType: number | null;
   installment: number | null;
   approvalNumber: number | null;
+  remainingBalance: number | null;
 };
 
 const aliases = {
@@ -37,6 +40,7 @@ const aliases = {
   fee: ["fee", "수수료", "수수료이자", "이자", "할부수수료"],
   paymentType: ["paymenttype", "결제구분", "이용구분", "일시불할부", "일시불/할부", "매입구분", "결제방법"],
   installment: ["installment", "할부", "할부회차", "할부/회차", "할부개월", "할부기간", "할부개월수"],
+  remainingBalance: ["remainingbalance", "결제후잔액", "할부잔액", "잔여금액", "잔액"],
   approvalNumber: ["approvalnumber", "승인번호", "승인no", "승인번호승인no", "승인번호no", "승인 no"],
 };
 
@@ -209,7 +213,8 @@ function parseHyundaiRows(rows: string[][]) {
       header.columns.installment === null
         ? getCell(alignedRow, header.columns.paymentType)
         : getCell(alignedRow, header.columns.installment);
-    const installmentMonths = parseInstallment(installmentSource);
+    const installment = parseInstallment(installmentSource);
+    const installmentRemainingAmount = parseAmount(getCell(alignedRow, header.columns.remainingBalance));
     const paymentTypeRaw = getCell(alignedRow, header.columns.paymentType);
 
     parsed.push({
@@ -217,8 +222,10 @@ function parseHyundaiRows(rows: string[][]) {
       merchantRaw: merchantRaw.trim(),
       merchantNormalized: normalizeMerchantName(merchantRaw),
       amount,
-      paymentType: normalizePaymentType(paymentTypeRaw, installmentMonths),
-      installmentMonths,
+      paymentType: normalizePaymentType(paymentTypeRaw, installment.totalMonths),
+      installmentMonths: installment.totalMonths,
+      installmentCurrentRound: installment.currentRound,
+      installmentRemainingAmount: Number.isNaN(installmentRemainingAmount) ? null : installmentRemainingAmount,
       approvalNumber: cleanOptional(getCell(alignedRow, header.columns.approvalNumber)),
     });
   });
@@ -328,6 +335,7 @@ function findHeader(rows: string[][]): { rowIndex: number; headerRow: string[]; 
       paymentType: findColumn(row, aliases.paymentType),
       installment: findColumn(row, aliases.installment),
       approvalNumber: findColumn(row, aliases.approvalNumber),
+      remainingBalance: findColumn(row, aliases.remainingBalance),
     };
 
     if (columns.date !== null && columns.merchant !== null && columns.amount !== null) {
@@ -342,6 +350,7 @@ function findHeader(rows: string[][]): { rowIndex: number; headerRow: string[]; 
           paymentType: columns.paymentType,
           installment: columns.installment,
           approvalNumber: columns.approvalNumber,
+          remainingBalance: columns.remainingBalance,
         },
       };
     }
@@ -433,15 +442,23 @@ function parseInstallment(value: string) {
   const clean = cleanCell(value).toLowerCase();
 
   if (!clean || clean.includes("일시") || clean.includes("lump")) {
-    return 1;
+    return { currentRound: null, totalMonths: 1 };
   }
 
-  const match = clean.match(/\d+/);
-  if (!match) {
-    return 1;
+  const fraction = clean.match(/(\d+)\s*[\/회차-]+\s*(\d+)/);
+  if (fraction) {
+    const currentRound = Math.max(Number(fraction[1]), 1);
+    const totalMonths = Math.max(Number(fraction[2]), currentRound, 1);
+    return { currentRound, totalMonths };
   }
 
-  return Math.max(Number(match[0]), 1);
+  const numbers = clean.match(/\d+/g);
+  if (!numbers || numbers.length === 0) {
+    return { currentRound: null, totalMonths: 1 };
+  }
+
+  const totalMonths = Math.max(Number(numbers[numbers.length - 1]), 1);
+  return { currentRound: null, totalMonths };
 }
 
 function normalizePaymentType(value: string, installmentMonths: number) {

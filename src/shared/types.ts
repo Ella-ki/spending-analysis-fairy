@@ -46,6 +46,8 @@ export type Transaction = {
   amount: number;
   payment_type: string | null;
   installment_months: number;
+  installment_current_round: number | null;
+  installment_remaining_amount: number | null;
   approval_number: string | null;
   category_id: string | null;
   special_flag: SpecialFlag | null;
@@ -71,4 +73,22 @@ export type Goal = {
   target_amount: number;
   starts_on: string;
   ends_on: string | null;
+};
+export type MonthlyIncome = {
+  id: string;
+  household_id: string;
+  month: string;
+  amount: number;
+  husband_amount: number;
+  wife_amount: number;
+  notes: string | null;
+};
+
+export type HomeLoanPayment = {
+  id: string;
+  household_id: string;
+  month: string;
+  label: string;
+  amount: number;
+  notes: string | null;
 };
