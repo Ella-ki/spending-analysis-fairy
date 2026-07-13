@@ -119,7 +119,7 @@ export function UploadPage() {
         <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" aria-hidden />
-            <h3 className="font-semibold">{result.status === "duplicate" ? "이미 가져온 명세서예요" : "가져오기가 완료됐어요"}</h3>
+            <h3 className="font-semibold">{result.status === "refreshed" ? "명세서를 새 기준으로 다시 계산했어요" : result.status === "duplicate" ? "이미 가져온 명세서예요" : "가져오기가 완료됐어요"}</h3>
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
@@ -135,7 +135,7 @@ export function UploadPage() {
               <dd className="font-semibold">{result.parsedRows}건</dd>
             </div>
             <div>
-              <dt className="text-emerald-700 dark:text-emerald-200">신규 저장</dt>
+              <dt className="text-emerald-700 dark:text-emerald-200">저장 거래</dt>
               <dd className="font-semibold">{result.insertedRows}건</dd>
             </div>
           </dl>

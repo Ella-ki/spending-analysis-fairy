@@ -23,6 +23,7 @@ type ColumnMap = {
   date: number;
   merchant: number;
   amount: number;
+  fee: number | null;
   paymentType: number | null;
   installment: number | null;
   approvalNumber: number | null;
@@ -31,7 +32,9 @@ type ColumnMap = {
 const aliases = {
   date: ["date", "transactiondate", "이용일", "이용일자", "거래일자", "사용일자", "승인일자", "매출일자", "이용일시"],
   merchant: ["merchant", "store", "가맹점명", "이용가맹점", "이용처", "사용처", "업체명", "상호", "가맹점"],
-  amount: ["amount", "이용금액", "사용금액", "승인금액", "결제금액", "매출금액", "원화금액", "금액"],
+  amount: ["amount", "이용금액", "사용금액", "승인금액", "매출금액", "원화금액", "금액"],
+  billingAmount: ["billingamount", "결제원금", "청구원금", "청구금액", "이번달청구금액", "이번달결제금액", "결제금액"],
+  fee: ["fee", "수수료", "수수료이자", "이자", "할부수수료"],
   paymentType: ["paymenttype", "결제구분", "이용구분", "일시불할부", "일시불/할부", "매입구분", "결제방법"],
   installment: ["installment", "할부", "할부회차", "할부/회차", "할부개월", "할부기간", "할부개월수"],
   approvalNumber: ["approvalnumber", "승인번호", "승인no", "승인번호승인no", "승인번호no", "승인 no"],
@@ -184,27 +187,30 @@ function parseHyundaiRows(rows: string[][]) {
   const dataRows = meaningfulRows.slice(header.rowIndex + 1);
 
   dataRows.forEach((row) => {
-    const dateRaw = getCell(row, header.columns.date);
-    const merchantRaw = getCell(row, header.columns.merchant);
-    const amountRaw = getCell(row, header.columns.amount);
+    const alignedRow = alignDataRow(row, header.headerRow);
+    const dateRaw = getCell(alignedRow, header.columns.date);
+    const merchantRaw = getCell(alignedRow, header.columns.merchant);
+    const amountRaw = getCell(alignedRow, header.columns.amount);
 
     if (!dateRaw || !merchantRaw || !amountRaw) {
       return;
     }
 
     const transactionDate = parseDate(dateRaw);
-    const amount = parseAmount(amountRaw);
+    const parsedAmount = parseAmount(amountRaw);
+    const parsedFee = parseAmount(getCell(alignedRow, header.columns.fee));
+    const amount = parsedAmount + (Number.isNaN(parsedFee) ? 0 : parsedFee);
 
-    if (!transactionDate || Number.isNaN(amount)) {
+    if (!transactionDate || Number.isNaN(parsedAmount)) {
       return;
     }
 
     const installmentSource =
       header.columns.installment === null
-        ? getCell(row, header.columns.paymentType)
-        : getCell(row, header.columns.installment);
+        ? getCell(alignedRow, header.columns.paymentType)
+        : getCell(alignedRow, header.columns.installment);
     const installmentMonths = parseInstallment(installmentSource);
-    const paymentTypeRaw = getCell(row, header.columns.paymentType);
+    const paymentTypeRaw = getCell(alignedRow, header.columns.paymentType);
 
     parsed.push({
       transactionDate,
@@ -213,7 +219,7 @@ function parseHyundaiRows(rows: string[][]) {
       amount,
       paymentType: normalizePaymentType(paymentTypeRaw, installmentMonths),
       installmentMonths,
-      approvalNumber: cleanOptional(getCell(row, header.columns.approvalNumber)),
+      approvalNumber: cleanOptional(getCell(alignedRow, header.columns.approvalNumber)),
     });
   });
 
@@ -307,7 +313,7 @@ function parseDelimitedRows(text: string, separator: "," | "\t") {
   return rows;
 }
 
-function findHeader(rows: string[][]): { rowIndex: number; columns: ColumnMap } | null {
+function findHeader(rows: string[][]): { rowIndex: number; headerRow: string[]; columns: ColumnMap } | null {
   for (let rowIndex = 0; rowIndex < Math.min(rows.length, 50); rowIndex += 1) {
     const row = rows[rowIndex];
     if (!row) {
@@ -317,7 +323,8 @@ function findHeader(rows: string[][]): { rowIndex: number; columns: ColumnMap } 
     const columns = {
       date: findColumn(row, aliases.date),
       merchant: findColumn(row, aliases.merchant),
-      amount: findColumn(row, aliases.amount),
+      amount: findColumn(row, aliases.billingAmount) ?? findColumn(row, aliases.amount),
+      fee: findColumn(row, aliases.fee),
       paymentType: findColumn(row, aliases.paymentType),
       installment: findColumn(row, aliases.installment),
       approvalNumber: findColumn(row, aliases.approvalNumber),
@@ -326,10 +333,12 @@ function findHeader(rows: string[][]): { rowIndex: number; columns: ColumnMap } 
     if (columns.date !== null && columns.merchant !== null && columns.amount !== null) {
       return {
         rowIndex,
+        headerRow: row,
         columns: {
           date: columns.date,
           merchant: columns.merchant,
           amount: columns.amount,
+          fee: columns.fee,
           paymentType: columns.paymentType,
           installment: columns.installment,
           approvalNumber: columns.approvalNumber,
@@ -341,6 +350,20 @@ function findHeader(rows: string[][]): { rowIndex: number; columns: ColumnMap } 
   return null;
 }
 
+function alignDataRow(row: string[], headerRow: string[]) {
+  if (row.length !== headerRow.length - 1) {
+    return row;
+  }
+
+  const fullAmountIndex = findColumn(headerRow, aliases.amount);
+  const billingAmountIndex = findColumn(headerRow, aliases.billingAmount);
+
+  if (fullAmountIndex === null || billingAmountIndex === null || fullAmountIndex >= billingAmountIndex) {
+    return row;
+  }
+
+  return [...row.slice(0, fullAmountIndex), "", ...row.slice(fullAmountIndex)];
+}
 function findColumn(row: string[], aliasList: string[]) {
   const normalizedAliases = aliasList.map(normalizeHeader);
   const index = row.findIndex((header) => normalizedAliases.includes(normalizeHeader(header)));

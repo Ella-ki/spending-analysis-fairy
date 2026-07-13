@@ -9,7 +9,7 @@ type ImportInput = {
 };
 
 export type ImportResult = {
-  status: "imported" | "duplicate";
+  status: "imported" | "duplicate" | "refreshed";
   statementId: string | null;
   periodMonth: string;
   parsedRows: number;
@@ -53,12 +53,50 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
   }
 
   if (existingStatement) {
+    const statementId = String(existingStatement.id);
+
+    const deleteResult = await supabase
+      .from("transactions")
+      .delete()
+      .eq("household_id", householdId)
+      .eq("statement_id", statementId);
+
+    if (deleteResult.error) {
+      throw deleteResult.error;
+    }
+
+    const updateResult = await supabase
+      .from("statements")
+      .update({
+        period_month: `${periodMonth}-01`,
+        row_count: parsedRows.length,
+        total_amount: totalAmount,
+      })
+      .eq("id", statementId)
+      .eq("household_id", householdId);
+
+    if (updateResult.error) {
+      throw updateResult.error;
+    }
+
+    const categories = await fetchCategories(householdId);
+    const rules = await fetchMerchantRules(householdId);
+    const inserts = await buildTransactionInserts({
+      rows: parsedRows,
+      householdId,
+      statementId,
+      userId,
+      categories,
+      rules,
+      checksum,
+    });
+
     return {
-      status: "duplicate",
-      statementId: String(existingStatement.id),
+      status: "refreshed",
+      statementId,
       periodMonth,
       parsedRows: parsedRows.length,
-      insertedRows: 0,
+      insertedRows: await insertTransactions(inserts),
       totalAmount,
     };
   }
@@ -106,22 +144,7 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
     checksum,
   });
 
-  let insertedRows = 0;
-  for (const batch of chunk(inserts, 500)) {
-    const { data, error } = await supabase
-      .from("transactions")
-      .upsert(batch, {
-        onConflict: "household_id,source_hash",
-        ignoreDuplicates: true,
-      })
-      .select("id");
-
-    if (error) {
-      throw error;
-    }
-
-    insertedRows += data?.length ?? 0;
-  }
+  const insertedRows = await insertTransactions(inserts);
 
   return {
     status: "imported",
@@ -134,6 +157,28 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
 }
 
 export const importHyundaiCsv = importHyundaiStatement;
+
+async function insertTransactions(inserts: TransactionInsert[]) {
+  let insertedRows = 0;
+
+  for (const batch of chunk(inserts, 500)) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .upsert(batch, {
+        onConflict: "household_id,source_hash",
+        ignoreDuplicates: false,
+      })
+      .select("id");
+
+    if (error) {
+      throw error;
+    }
+
+    insertedRows += data?.length ?? 0;
+  }
+
+  return insertedRows;
+}
 
 async function fetchCategories(householdId: string) {
   const { data, error } = await supabase
@@ -177,8 +222,8 @@ async function buildTransactionInserts(input: {
     rows.map(async (row, index): Promise<TransactionInsert> => {
       const classification = classifyTransaction(row, categories, rules);
       const source = row.approvalNumber
-        ? `${row.approvalNumber}|${row.transactionDate}|${row.amount}|${row.merchantNormalized}`
-        : `${checksum}|${index}|${row.transactionDate}|${row.amount}|${row.merchantNormalized}`;
+        ? `${row.approvalNumber}|${row.transactionDate}|${row.merchantNormalized}`
+        : `${checksum}|${index}|${row.transactionDate}|${row.merchantNormalized}`;
 
       return {
         household_id: householdId,
