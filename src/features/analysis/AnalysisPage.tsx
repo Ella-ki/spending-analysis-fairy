@@ -29,7 +29,7 @@ export function AnalysisPage() {
   const data = dashboardQuery.data;
 
   if (!data || data.transactions.length === 0) {
-    return <EmptyState title="분석할 거래가 없습니다" description="CSV를 가져오면 월별 비교와 카테고리 변화를 계산합니다." />;
+    return <EmptyState title="분석할 거래가 없습니다" description="현대카드 XLS 명세서를 가져오면 월별 비교와 카테고리 변화를 계산합니다." />;
   }
 
   const previousMonth = addMonths(new Date(), -1);

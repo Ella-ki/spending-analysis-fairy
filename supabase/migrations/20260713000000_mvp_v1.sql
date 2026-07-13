@@ -429,7 +429,7 @@ values (
   'statements',
   false,
   10485760,
-  array['text/csv', 'text/plain', 'application/vnd.ms-excel', 'application/csv']
+  array['text/csv', 'text/plain', 'text/html', 'application/vnd.ms-excel', 'application/csv']
 )
 on conflict (id) do update
 set public = false,

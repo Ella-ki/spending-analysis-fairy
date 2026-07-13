@@ -1,6 +1,6 @@
 import { toMonthKey } from "../../lib/dates";
 
-export type ParsedCsvTransaction = {
+export type ParsedStatementTransaction = {
   transactionDate: string;
   merchantRaw: string;
   merchantNormalized: string;
@@ -8,6 +8,14 @@ export type ParsedCsvTransaction = {
   paymentType: string;
   installmentMonths: number;
   approvalNumber: string | null;
+};
+
+export type ParsedCsvTransaction = ParsedStatementTransaction;
+
+export type ParsedStatementFile = {
+  transactions: ParsedStatementTransaction[];
+  checksum: string;
+  sourceKind: "csv" | "xls-html" | "xls-xml" | "tabular-text";
 };
 
 type ColumnMap = {
@@ -20,40 +28,121 @@ type ColumnMap = {
 };
 
 const aliases = {
-  date: ["date", "transactiondate", "이용일자", "거래일자", "사용일자", "승인일자", "매출일자"],
-  merchant: ["merchant", "store", "가맹점명", "이용가맹점", "사용처", "업체명", "상호"],
-  amount: ["amount", "이용금액", "사용금액", "승인금액", "결제금액", "원화금액"],
-  paymentType: ["paymenttype", "결제구분", "이용구분", "일시불할부", "매입구분"],
-  installment: ["installment", "할부", "할부개월", "할부기간"],
-  approvalNumber: ["approvalnumber", "승인번호", "승인no", "승인번호승인no"],
+  date: ["date", "transactiondate", "이용일자", "거래일자", "사용일자", "승인일자", "매출일자", "이용일시"],
+  merchant: ["merchant", "store", "가맹점명", "이용가맹점", "이용처", "사용처", "업체명", "상호", "가맹점"],
+  amount: ["amount", "이용금액", "사용금액", "승인금액", "결제금액", "매출금액", "원화금액", "금액"],
+  paymentType: ["paymenttype", "결제구분", "이용구분", "일시불할부", "일시불/할부", "매입구분", "결제방법"],
+  installment: ["installment", "할부", "할부개월", "할부기간", "할부개월수"],
+  approvalNumber: ["approvalnumber", "승인번호", "승인no", "승인번호승인no", "승인번호no", "승인 no"],
 };
+
+export async function parseHyundaiStatementFile(file: File): Promise<ParsedStatementFile> {
+  const buffer = await file.arrayBuffer();
+  const checksum = await sha256ArrayBuffer(buffer);
+  const { rows, sourceKind } = parseStatementRows(file.name, buffer);
+
+  return {
+    transactions: parseHyundaiRows(rows),
+    checksum,
+    sourceKind,
+  };
+}
 
 export async function decodeCsvFile(file: File) {
   const buffer = await file.arrayBuffer();
-  const utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
-  const replacementCount = utf8Text.match(/\uFFFD/g)?.length ?? 0;
-
-  if (replacementCount > 3) {
-    try {
-      return new TextDecoder("euc-kr", { fatal: false }).decode(buffer);
-    } catch {
-      return utf8Text;
-    }
-  }
-
-  return utf8Text;
+  return decodeStatementText(buffer);
 }
 
 export function parseHyundaiCsv(text: string) {
-  const rows = parseCsv(text).filter((row) => row.some((cell) => cell.trim().length > 0));
-  const header = findHeader(rows);
+  return parseHyundaiRows(parseDelimitedRows(text, ","));
+}
 
-  if (!header) {
-    throw new Error("CSV에서 이용일자, 가맹점명, 이용금액 컬럼을 찾지 못했습니다.");
+export function inferStatementMonth(rows: ParsedStatementTransaction[]) {
+  const counts = new Map<string, number>();
+
+  rows.forEach((row) => {
+    const monthKey = toMonthKey(row.transactionDate);
+    counts.set(monthKey, (counts.get(monthKey) ?? 0) + 1);
+  });
+
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? toMonthKey(new Date());
+}
+
+export function normalizeMerchantName(raw: string) {
+  let merchant = raw
+    .normalize("NFKC")
+    .replace(/\u0000/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const splitParts = merchant
+    .split(/\s[-–—]\s|[|]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (splitParts.length > 1) {
+    merchant = splitParts[splitParts.length - 1] ?? merchant;
   }
 
-  const parsed: ParsedCsvTransaction[] = [];
-  const dataRows = rows.slice(header.rowIndex + 1);
+  merchant = merchant
+    .replace(/\((주|유|재)\)/gi, "")
+    .replace(/㈜/g, "")
+    .replace(/주식회사/g, "")
+    .replace(/[()[\]{}"']/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/[.,;:]+$/g, "")
+    .trim();
+
+  return merchant || raw.trim();
+}
+
+function parseStatementRows(fileName: string, buffer: ArrayBuffer): {
+  rows: string[][];
+  sourceKind: ParsedStatementFile["sourceKind"];
+} {
+  const bytes = new Uint8Array(buffer);
+  const lowerName = fileName.toLowerCase();
+
+  if (isBinaryXls(bytes)) {
+    throw new Error(
+      "이 파일은 오래된 바이너리 XLS 형식입니다. 현대카드 사이트에서 받은 파일이 그대로 실패한다면, Excel에서 열어 CSV 또는 웹 페이지 형식으로 다시 저장한 뒤 올려 주세요.",
+    );
+  }
+
+  if (isZipXlsx(bytes)) {
+    throw new Error("XLSX는 아직 지원하지 않습니다. 현대카드에서 받은 XLS 또는 CSV 파일을 올려 주세요.");
+  }
+
+  const text = decodeStatementText(buffer);
+  const trimmed = text.trimStart();
+
+  if (/<table[\s>]/i.test(trimmed)) {
+    return { rows: parseHtmlTableRows(trimmed), sourceKind: "xls-html" };
+  }
+
+  if (/^<\?xml|<Workbook[\s>]/i.test(trimmed)) {
+    return { rows: parseXmlSpreadsheetRows(trimmed), sourceKind: "xls-xml" };
+  }
+
+  const separator = chooseSeparator(text, lowerName);
+  return {
+    rows: parseDelimitedRows(text, separator),
+    sourceKind: separator === "," ? "csv" : "tabular-text",
+  };
+}
+
+function parseHyundaiRows(rows: string[][]) {
+  const meaningfulRows = rows
+    .map((row) => row.map(cleanCell))
+    .filter((row) => row.some((cell) => cell.length > 0));
+  const header = findHeader(meaningfulRows);
+
+  if (!header) {
+    throw new Error("명세서에서 이용일자, 가맹점명, 이용금액 컬럼을 찾지 못했습니다.");
+  }
+
+  const parsed: ParsedStatementTransaction[] = [];
+  const dataRows = meaningfulRows.slice(header.rowIndex + 1);
 
   dataRows.forEach((row) => {
     const dateRaw = getCell(row, header.columns.date);
@@ -96,46 +185,44 @@ export function parseHyundaiCsv(text: string) {
   return parsed;
 }
 
-export function inferStatementMonth(rows: ParsedCsvTransaction[]) {
-  const counts = new Map<string, number>();
+function parseHtmlTableRows(text: string) {
+  const parser = new DOMParser();
+  const document = parser.parseFromString(text, "text/html");
+  const table = document.querySelector("table");
 
-  rows.forEach((row) => {
-    const monthKey = toMonthKey(row.transactionDate);
-    counts.set(monthKey, (counts.get(monthKey) ?? 0) + 1);
-  });
-
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? toMonthKey(new Date());
-}
-
-export function normalizeMerchantName(raw: string) {
-  let merchant = raw
-    .normalize("NFKC")
-    .replace(/\u0000/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const splitParts = merchant
-    .split(/\s[-–—]\s|[|]/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (splitParts.length > 1) {
-    merchant = splitParts[splitParts.length - 1] ?? merchant;
+  if (!table) {
+    throw new Error("XLS 파일에서 표 데이터를 찾지 못했습니다.");
   }
 
-  merchant = merchant
-    .replace(/\((주|유|재)\)/gi, "")
-    .replace(/㈜/g, "")
-    .replace(/주식회사/g, "")
-    .replace(/[()[\]{}"']/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/[.,;:]+$/g, "")
-    .trim();
-
-  return merchant || raw.trim();
+  return [...table.querySelectorAll("tr")].map((row) =>
+    [...row.querySelectorAll("th,td")].map((cell) => cleanCell(cell.textContent ?? "")),
+  );
 }
 
-function parseCsv(text: string) {
+function parseXmlSpreadsheetRows(text: string) {
+  const parser = new DOMParser();
+  const document = parser.parseFromString(text, "text/xml");
+  const parseError = document.querySelector("parsererror");
+
+  if (parseError) {
+    throw new Error("XLS XML 데이터를 읽지 못했습니다.");
+  }
+
+  const rows = [...document.getElementsByTagName("Row")].map((row) =>
+    [...row.getElementsByTagName("Cell")].map((cell) => {
+      const data = cell.getElementsByTagName("Data")[0];
+      return cleanCell(data?.textContent ?? cell.textContent ?? "");
+    }),
+  );
+
+  if (rows.length === 0) {
+    throw new Error("XLS XML 파일에서 행 데이터를 찾지 못했습니다.");
+  }
+
+  return rows;
+}
+
+function parseDelimitedRows(text: string, separator: "," | "\t") {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -156,7 +243,7 @@ function parseCsv(text: string) {
       continue;
     }
 
-    if (char === "," && !inQuotes) {
+    if (char === separator && !inQuotes) {
       row.push(cell);
       cell = "";
       continue;
@@ -182,7 +269,7 @@ function parseCsv(text: string) {
 }
 
 function findHeader(rows: string[][]): { rowIndex: number; columns: ColumnMap } | null {
-  for (let rowIndex = 0; rowIndex < Math.min(rows.length, 30); rowIndex += 1) {
+  for (let rowIndex = 0; rowIndex < Math.min(rows.length, 50); rowIndex += 1) {
     const row = rows[rowIndex];
     if (!row) {
       continue;
@@ -237,9 +324,18 @@ function getCell(row: string[], index: number | null) {
 }
 
 function parseDate(value: string) {
-  const digits = value.replace(/\D/g, "");
+  const clean = cleanCell(value);
+  const serial = Number(clean);
 
-  if (digits.length === 8) {
+  if (/^\d{5}(\.\d+)?$/.test(clean) && serial > 20_000 && serial < 80_000) {
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    epoch.setUTCDate(epoch.getUTCDate() + Math.floor(serial));
+    return epoch.toISOString().slice(0, 10);
+  }
+
+  const digits = clean.replace(/\D/g, "");
+
+  if (digits.length >= 8) {
     return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
   }
 
@@ -247,7 +343,7 @@ function parseDate(value: string) {
     return `20${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}`;
   }
 
-  const parsed = new Date(value);
+  const parsed = new Date(clean);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
@@ -259,8 +355,9 @@ function parseDate(value: string) {
 }
 
 function parseAmount(value: string) {
-  const negative = value.includes("-") || /^\s*\(/.test(value);
-  const numeric = value.replace(/[^\d.]/g, "");
+  const clean = cleanCell(value);
+  const negative = clean.includes("-") || /^\s*\(/.test(clean);
+  const numeric = clean.replace(/[^\d.]/g, "");
 
   if (!numeric) {
     return Number.NaN;
@@ -271,7 +368,7 @@ function parseAmount(value: string) {
 }
 
 function parseInstallment(value: string) {
-  const clean = value.trim().toLowerCase();
+  const clean = cleanCell(value).toLowerCase();
 
   if (!clean || clean.includes("일시") || clean.includes("lump")) {
     return 1;
@@ -286,7 +383,7 @@ function parseInstallment(value: string) {
 }
 
 function normalizePaymentType(value: string, installmentMonths: number) {
-  const clean = value.trim();
+  const clean = cleanCell(value);
 
   if (clean) {
     return clean;
@@ -296,6 +393,48 @@ function normalizePaymentType(value: string, installmentMonths: number) {
 }
 
 function cleanOptional(value: string) {
-  const clean = value.trim();
+  const clean = cleanCell(value);
   return clean.length > 0 ? clean : null;
+}
+
+function cleanCell(value: string) {
+  return value
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function chooseSeparator(text: string, fileName: string): "," | "\t" {
+  if (fileName.endsWith(".csv")) {
+    return ",";
+  }
+
+  const sample = text.split(/\r?\n/).slice(0, 10).join("\n");
+  const tabCount = (sample.match(/\t/g) ?? []).length;
+  const commaCount = (sample.match(/,/g) ?? []).length;
+  return tabCount > commaCount ? "\t" : ",";
+}
+
+function decodeStatementText(buffer: ArrayBuffer) {
+  const candidates = ["utf-8", "euc-kr"];
+  const decoded = candidates.map((encoding) => {
+    const text = new TextDecoder(encoding, { fatal: false }).decode(buffer);
+    const replacementCount = text.match(/\uFFFD/g)?.length ?? 0;
+    return { text, replacementCount };
+  });
+
+  return decoded.sort((a, b) => a.replacementCount - b.replacementCount)[0]?.text ?? "";
+}
+
+function isBinaryXls(bytes: Uint8Array) {
+  return bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
+}
+
+function isZipXlsx(bytes: Uint8Array) {
+  return bytes[0] === 0x50 && bytes[1] === 0x4b;
+}
+
+async function sha256ArrayBuffer(buffer: ArrayBuffer) {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  return [...new Uint8Array(hashBuffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }

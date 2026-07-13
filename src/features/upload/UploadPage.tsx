@@ -8,7 +8,7 @@ import { EmptyState } from "../../shared/components/EmptyState";
 import { formatKrw } from "../../lib/format";
 import { supabase } from "../../lib/supabase";
 import type { Statement } from "../../shared/types";
-import { importHyundaiCsv, type ImportResult } from "./importTransactions";
+import { importHyundaiStatement, type ImportResult } from "./importTransactions";
 
 export function UploadPage() {
   const { session } = useAuth();
@@ -48,7 +48,7 @@ export function UploadPage() {
         throw new Error("파일과 household 정보가 필요합니다.");
       }
 
-      return importHyundaiCsv({ file, householdId, userId });
+      return importHyundaiStatement({ file, householdId, userId });
     },
     onSuccess: async (nextResult) => {
       setResult(nextResult);
@@ -63,7 +63,7 @@ export function UploadPage() {
 
   const fileLabel = useMemo(() => {
     if (!file) {
-      return "Hyundai Card CSV 선택";
+      return "현대카드 이용명세서 XLS 선택";
     }
     return `${file.name} · ${Math.ceil(file.size / 1024)} KB`;
   }, [file]);
@@ -76,10 +76,10 @@ export function UploadPage() {
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <p className="text-sm font-semibold text-mint">CSV Upload</p>
-        <h2 className="mt-1 text-3xl font-bold tracking-normal">이번 달 현대카드 CSV만 올리면 끝.</h2>
+        <p className="text-sm font-semibold text-mint">Statement Upload</p>
+        <h2 className="mt-1 text-3xl font-bold tracking-normal">현대카드 이용명세서 XLS를 올리면 끝.</h2>
         <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
-          거래일, 가맹점, 금액, 결제 방식, 할부, 승인번호를 정규화해서 저장하고 기존 merchant rule로 자동 분류합니다.
+          현대카드에서 내려받은 XLS 명세서를 읽어 거래일, 가맹점, 금액, 결제 방식, 할부, 승인번호를 정규화하고 기존 merchant rule로 자동 분류합니다.
         </p>
       </section>
 
@@ -87,8 +87,15 @@ export function UploadPage() {
         <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-center dark:border-neutral-700 dark:bg-neutral-950">
           <FileUp className="h-8 w-8 text-mint" aria-hidden />
           <span className="text-sm font-semibold">{fileLabel}</span>
-          <span className="text-xs text-stone-500 dark:text-stone-400">UTF-8 또는 EUC-KR CSV를 지원합니다.</span>
-          <input type="file" accept=".csv,text/csv" onChange={handleFileChange} className="sr-only" />
+          <span className="text-xs text-stone-500 dark:text-stone-400">
+            현대카드 XLS를 우선 지원하고, CSV도 보조로 지원합니다.
+          </span>
+          <input
+            type="file"
+            accept=".xls,.csv,application/vnd.ms-excel,text/csv"
+            onChange={handleFileChange}
+            className="sr-only"
+          />
         </label>
 
         <Button
@@ -157,7 +164,7 @@ export function UploadPage() {
             ))}
           </div>
         ) : (
-          <EmptyState title="아직 업로드가 없습니다" description="현대카드 CSV를 올리면 이번 달 카드 소비가 대시보드에 반영됩니다." />
+          <EmptyState title="아직 업로드가 없습니다" description="현대카드 XLS 명세서를 올리면 이번 달 카드 소비가 대시보드에 반영됩니다." />
         )}
       </section>
     </div>

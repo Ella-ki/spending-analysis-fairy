@@ -44,17 +44,17 @@ export function DashboardPage() {
       <div className="flex flex-col gap-6">
         <section>
           <p className="text-sm font-semibold text-mint">Current Month</p>
-          <h2 className="mt-1 text-3xl font-bold tracking-normal">첫 CSV를 올리면 카드값 흐름이 바로 보입니다.</h2>
+          <h2 className="mt-1 text-3xl font-bold tracking-normal">첫 XLS 명세서를 올리면 카드값 흐름이 바로 보입니다.</h2>
         </section>
         <EmptyState
           title="아직 거래 데이터가 없습니다"
-          description="현대카드 CSV를 업로드하면 총 카드값, 실제 소비, 할부, 고정비, 변동비, 예산 진행률이 자동 계산됩니다."
+          description="현대카드 XLS 명세서를 업로드하면 총 카드값, 실제 소비, 할부, 고정비, 변동비, 예산 진행률이 자동 계산됩니다."
           action={
             <Link
               to="/upload"
               className="inline-flex min-h-11 items-center justify-center rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white dark:bg-stone-50 dark:text-ink"
             >
-              CSV 업로드
+              명세서 업로드
             </Link>
           }
         />
@@ -79,7 +79,7 @@ export function DashboardPage() {
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-ink px-3 text-sm font-semibold text-white dark:bg-stone-50 dark:text-ink"
           >
             <UploadCloud className="h-5 w-5" aria-hidden />
-            CSV
+            XLS
           </Link>
         </div>
 

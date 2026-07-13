@@ -1,6 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import type { Category, MerchantRule, SpecialFlag } from "../../shared/types";
-import { decodeCsvFile, inferStatementMonth, parseHyundaiCsv, type ParsedCsvTransaction } from "./csv";
+import { inferStatementMonth, parseHyundaiStatementFile, type ParsedStatementTransaction } from "./csv";
 
 type ImportInput = {
   file: File;
@@ -34,11 +34,11 @@ type TransactionInsert = {
   source_hash: string;
 };
 
-export async function importHyundaiCsv({ file, householdId, userId }: ImportInput): Promise<ImportResult> {
-  const csvText = await decodeCsvFile(file);
-  const parsedRows = parseHyundaiCsv(csvText);
+export async function importHyundaiStatement({ file, householdId, userId }: ImportInput): Promise<ImportResult> {
+  const parsedFile = await parseHyundaiStatementFile(file);
+  const parsedRows = parsedFile.transactions;
   const periodMonth = inferStatementMonth(parsedRows);
-  const checksum = await sha256(csvText);
+  const checksum = parsedFile.checksum;
   const totalAmount = parsedRows.reduce((sum, row) => sum + row.amount, 0);
 
   const { data: existingStatement, error: existingError } = await supabase
@@ -66,7 +66,7 @@ export async function importHyundaiCsv({ file, householdId, userId }: ImportInpu
   const storagePath = `${householdId}/${periodMonth}/${Date.now()}-${safeFileName(file.name)}`;
   const upload = await supabase.storage.from("statements").upload(storagePath, file, {
     cacheControl: "31536000",
-    contentType: file.type || "text/csv",
+    contentType: file.type || inferContentType(file.name),
     upsert: false,
   });
 
@@ -133,6 +133,8 @@ export async function importHyundaiCsv({ file, householdId, userId }: ImportInpu
   };
 }
 
+export const importHyundaiCsv = importHyundaiStatement;
+
 async function fetchCategories(householdId: string) {
   const { data, error } = await supabase
     .from("categories")
@@ -161,7 +163,7 @@ async function fetchMerchantRules(householdId: string) {
 }
 
 async function buildTransactionInserts(input: {
-  rows: ParsedCsvTransaction[];
+  rows: ParsedStatementTransaction[];
   householdId: string;
   statementId: string;
   userId: string;
@@ -199,7 +201,7 @@ async function buildTransactionInserts(input: {
 }
 
 function classifyTransaction(
-  row: ParsedCsvTransaction,
+  row: ParsedStatementTransaction,
   categories: Category[],
   rules: MerchantRule[],
 ): { categoryId: string | null; specialFlag: SpecialFlag | null; isFixed: boolean } {
@@ -228,31 +230,31 @@ function inferCategoryName(merchant: string) {
   if (matchesAny(merchant, ["starbucks", "스타벅스", "coffee", "커피", "compose", "컴포즈", "mega", "메가커피", "ediya", "이디야"])) {
     return "Cafe";
   }
-  if (matchesAny(merchant, ["마트", "emart", "이마트", "homeplus", "홈플러스", "market", "쿠팡프레시"])) {
+  if (matchesAny(merchant, ["마트", "emart", "이마트", "homeplus", "홈플러스", "market", "쿠팡프레시", "농협", "하나로마트"])) {
     return "Groceries";
   }
-  if (matchesAny(merchant, ["coupang", "쿠팡", "荑좏뙜", "naver", "네이버", "11번가", "gmarket", "지마켓"])) {
+  if (matchesAny(merchant, ["coupang", "쿠팡", "naver", "네이버", "11번가", "gmarket", "지마켓", "옥션", "ssg"])) {
     return "Shopping";
   }
-  if (matchesAny(merchant, ["배달", "배민", "baemin", "yogiyo", "요기요", "식당", "restaurant"])) {
+  if (matchesAny(merchant, ["배달", "배민", "baemin", "yogiyo", "요기요", "식당", "restaurant", "푸드", "치킨", "피자"])) {
     return "Food";
   }
-  if (matchesAny(merchant, ["택시", "버스", "지하철", "kakao t", "카카오t", "철도", "korail"])) {
+  if (matchesAny(merchant, ["택시", "버스", "지하철", "kakao t", "카카오t", "철도", "korail", "주유", "하이패스"])) {
     return "Transportation";
   }
-  if (matchesAny(merchant, ["병원", "약국", "clinic", "hospital"])) {
+  if (matchesAny(merchant, ["병원", "약국", "clinic", "hospital", "의원", "치과"])) {
     return "Hospital";
   }
-  if (matchesAny(merchant, ["nike", "나이키", "running", "러닝"])) {
+  if (matchesAny(merchant, ["nike", "나이키", "running", "러닝", "마라톤"])) {
     return "Running";
   }
-  if (matchesAny(merchant, ["netflix", "spotify", "youtube", "유튜브", "google", "apple.com/bill"])) {
+  if (matchesAny(merchant, ["netflix", "spotify", "youtube", "유튜브", "google", "apple.com/bill", "구독"])) {
     return "Subscriptions";
   }
-  if (matchesAny(merchant, ["항공", "air", "hotel", "호텔", "숙박"])) {
+  if (matchesAny(merchant, ["항공", "air", "hotel", "호텔", "숙박", "여행", "렌터카"])) {
     return "Travel";
   }
-  if (matchesAny(merchant, ["전기", "가스", "수도", "통신", "sk텔레콤", "kt", "lg u", "u+"] )) {
+  if (matchesAny(merchant, ["전기", "가스", "수도", "통신", "sk텔레콤", "kt", "lg u", "u+"])) {
     return "Utilities";
   }
   if (matchesAny(merchant, ["보험", "insurance"])) {
@@ -292,6 +294,14 @@ async function sha256(value: string) {
 
 function safeFileName(name: string) {
   return name.normalize("NFKC").replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/-+/g, "-");
+}
+
+function inferContentType(fileName: string) {
+  const lowerName = fileName.toLowerCase();
+  if (lowerName.endsWith(".xls")) {
+    return "application/vnd.ms-excel";
+  }
+  return "text/csv";
 }
 
 function chunk<T>(items: T[], size: number) {
