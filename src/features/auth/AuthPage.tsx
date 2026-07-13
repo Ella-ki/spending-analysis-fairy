@@ -96,10 +96,7 @@ export function AuthPage() {
             <Sparkles className="h-4 w-4 text-lavender" aria-hidden />
             우리집 소비 흐름 정리
           </p>
-          <h1 className="mt-2 text-4xl font-bold tracking-normal">카드값, 할부, 월급까지 한눈에 봅니다.</h1>
-          <p className="mt-4 text-sm leading-6 text-stone-600 dark:text-stone-300">
-            현대카드 명세서를 올리면 이번 달 소비와 다음 할부 부담, 교빵과 건빵의 현금흐름을 함께 정리합니다.
-          </p>
+          <h1 className="mt-2 text-4xl font-bold tracking-normal">건빵과 교빵이 현금흐름 함께 정리</h1>
         </div>
 
         {step === "email" ? (
