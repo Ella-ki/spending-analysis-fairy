@@ -76,7 +76,7 @@ export function UploadPage() {
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <p className="text-sm font-semibold text-mint">Statement Upload</p>
+        <p className="text-sm font-semibold text-mint">명세서 업로드</p>
         <h2 className="mt-1 text-3xl font-bold tracking-normal">현대카드 이용명세서 XLS를 올리면 끝.</h2>
         <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
           현대카드에서 내려받은 XLS 명세서를 읽어 거래일, 가맹점, 금액, 결제 방식, 할부, 승인번호를 정규화하고 기존 merchant rule로 자동 분류합니다.

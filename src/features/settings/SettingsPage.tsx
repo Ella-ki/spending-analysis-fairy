@@ -7,10 +7,10 @@ import { getStoredTheme, setStoredTheme, type ThemePreference } from "../../lib/
 
 const futureFeatures = [
   "OCR",
-  "PDF import",
-  "Multiple card companies",
-  "Bank account integration",
-  "AI spending recommendations",
+  "PDF 가져오기",
+  "여러 카드사",
+  "은행 계좌 연동",
+  "AI 소비 추천",
 ];
 
 export function SettingsPage() {
@@ -37,12 +37,12 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-7">
       <section>
-        <p className="text-sm font-semibold text-mint">Settings</p>
+        <p className="text-sm font-semibold text-mint">설정</p>
         <h2 className="mt-1 text-3xl font-bold tracking-normal">MVP v1 범위를 명확하게 유지합니다.</h2>
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 className="text-base font-bold tracking-normal">Household</h3>
+        <h3 className="text-base font-bold tracking-normal">가계부</h3>
         <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{membership?.household.name}</p>
         <div className="mt-3 rounded-lg bg-stone-100 p-3 font-mono text-xs text-stone-700 dark:bg-neutral-950 dark:text-stone-200">
           {membership?.household.join_code}
@@ -54,12 +54,12 @@ export function SettingsPage() {
           icon={<Copy className="h-4 w-4" aria-hidden />}
           onClick={copyJoinCode}
         >
-          {copied ? "복사됨" : "Join code 복사"}
+          {copied ? "복사됨" : "참여 코드 복사"}
         </Button>
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 className="text-base font-bold tracking-normal">Theme</h3>
+        <h3 className="text-base font-bold tracking-normal">화면 테마</h3>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {(["system", "light", "dark"] as const).map((option) => (
             <button
@@ -73,19 +73,19 @@ export function SettingsPage() {
               }`}
             >
               {option === "dark" ? <Moon className="h-4 w-4" aria-hidden /> : <Sun className="h-4 w-4" aria-hidden />}
-              {option}
+              {{ system: "시스템", light: "라이트", dark: "다크" }[option]}
             </button>
           ))}
         </div>
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 className="text-base font-bold tracking-normal">Prepared, not implemented</h3>
+        <h3 className="text-base font-bold tracking-normal">준비됨, 아직 구현하지 않음</h3>
         <div className="mt-3 flex flex-col gap-2">
           {futureFeatures.map((feature) => (
             <div key={feature} className="flex items-center justify-between rounded-lg bg-stone-100 px-3 py-2 text-sm dark:bg-neutral-950">
               <span className="font-medium">{feature}</span>
-              <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">reserved</span>
+              <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">보류</span>
             </div>
           ))}
         </div>

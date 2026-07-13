@@ -17,11 +17,11 @@ export function AppShell() {
       <header className="sticky top-0 z-20 border-b border-stone-200 bg-stone-50/95 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase text-mint">Household Finance</p>
+            <p className="text-xs font-semibold uppercase text-mint">소비분석요정</p>
             <h1 className="text-xl font-bold tracking-normal">{membership?.household.name ?? "우리집"}</h1>
           </div>
           <div className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-stone-600 shadow-sm dark:bg-neutral-900 dark:text-stone-300">
-            {membership?.relationship_role === "wife" ? "Wife" : "Husband"}
+            {membership?.relationship_role === "wife" ? "교빵" : "건빵"}
           </div>
         </div>
       </header>

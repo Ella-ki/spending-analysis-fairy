@@ -43,7 +43,7 @@ export function DashboardPage() {
     return (
       <div className="flex flex-col gap-6">
         <section>
-          <p className="text-sm font-semibold text-mint">Current Month</p>
+          <p className="text-sm font-semibold text-mint">이번 달</p>
           <h2 className="mt-1 text-3xl font-bold tracking-normal">첫 XLS 명세서를 올리면 카드값 흐름이 바로 보입니다.</h2>
         </section>
         <EmptyState
@@ -71,7 +71,7 @@ export function DashboardPage() {
       <section>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-mint">Current Month</p>
+            <p className="text-sm font-semibold text-mint">이번 달</p>
             <h2 className="mt-1 text-3xl font-bold tracking-normal">이번 달 소비 상태</h2>
           </div>
           <Link
@@ -86,7 +86,7 @@ export function DashboardPage() {
         <div className="mt-5 rounded-lg border border-stone-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">Target progress</p>
+              <p className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">목표 진행률</p>
               <p className="mt-1 text-xl font-bold">{formatKrw(metrics.actualSpending)} / {formatKrw(metrics.targetAmount)}</p>
             </div>
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink text-xl font-bold text-white dark:bg-stone-50 dark:text-ink">

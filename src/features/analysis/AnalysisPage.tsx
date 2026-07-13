@@ -43,7 +43,7 @@ export function AnalysisPage() {
   return (
     <div className="flex flex-col gap-7">
       <section>
-        <p className="text-sm font-semibold text-mint">Monthly Analysis</p>
+        <p className="text-sm font-semibold text-mint">월간 분석</p>
         <h2 className="mt-1 text-3xl font-bold tracking-normal">이번 달 소비가 어떻게 달라졌는지.</h2>
         <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
           특별 지출은 실제 소비에서 제외하고, 명세서 월 기준으로 이전 달과 평균 대비 흐름을 빠르게 봅니다.
@@ -51,11 +51,11 @@ export function AnalysisPage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <MetricCard label="Current" value={formatKrw(data.metrics.actualSpending, true)} />
-        <MetricCard label="Previous Month" value={formatKrw(data.metrics.previousMonthSpending, true)} />
-        <MetricCard label="Average" value={formatKrw(data.metrics.monthlyAverage, true)} />
+        <MetricCard label="이번 달" value={formatKrw(data.metrics.actualSpending, true)} />
+        <MetricCard label="지난달" value={formatKrw(data.metrics.previousMonthSpending, true)} />
+        <MetricCard label="평균" value={formatKrw(data.metrics.monthlyAverage, true)} />
         <MetricCard
-          label="Vs Target"
+          label="목표 대비"
           value={signedKrw(data.metrics.remainingBudget)}
           tone={data.metrics.remainingBudget >= 0 ? "good" : "bad"}
         />
@@ -63,11 +63,11 @@ export function AnalysisPage() {
 
       <section className="grid gap-3">
         <AnalysisCard
-          title="Top spending merchant"
+          title="가장 많이 쓴 가맹점"
           body={topMerchant ? `${topMerchant.name}에서 ${formatKrw(topMerchant.amount)} 사용했습니다.` : "이번 달 가맹점 데이터가 없습니다."}
         />
         <AnalysisCard
-          title="Coffee spending"
+          title="커피 지출"
           body={
             coffeeDelta === 0
               ? "커피 지출은 지난달과 거의 같습니다."
@@ -75,13 +75,13 @@ export function AnalysisPage() {
           }
         />
         <AnalysisCard
-          title="Installments"
+          title="할부 결제"
           body={`이번 달 할부 결제 금액은 ${formatKrw(data.metrics.installmentAmount)}입니다.`}
         />
       </section>
 
       <section>
-        <h3 className="text-lg font-bold tracking-normal">Category changes</h3>
+        <h3 className="text-lg font-bold tracking-normal">카테고리 변화</h3>
         <div className="mt-3 flex flex-col gap-2">
           {categoryDeltas.map((row) => (
             <article key={row.name} className="rounded-lg border border-stone-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">

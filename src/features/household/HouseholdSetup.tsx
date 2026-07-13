@@ -25,7 +25,7 @@ export function HouseholdSetup() {
         await joinHousehold({ joinCode: joinCode.trim(), role });
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Household 설정에 실패했습니다.");
+      setError(caught instanceof Error ? caught.message : "가계부 설정에 실패했습니다.");
     } finally {
       setIsSubmitting(false);
     }
@@ -62,7 +62,7 @@ export function HouseholdSetup() {
         <form onSubmit={handleSubmit} className="rounded-lg border border-stone-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
           {mode === "create" ? (
             <label className="block text-sm font-semibold">
-              Household 이름
+              가계부 이름
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 dark:border-neutral-700 dark:bg-neutral-950">
                 <Home className="h-5 w-5 text-stone-400" aria-hidden />
                 <input
@@ -75,7 +75,7 @@ export function HouseholdSetup() {
             </label>
           ) : (
             <label className="block text-sm font-semibold">
-              Join code
+              참여 코드
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 dark:border-neutral-700 dark:bg-neutral-950">
                 <Link2 className="h-5 w-5 text-stone-400" aria-hidden />
                 <input
@@ -103,14 +103,14 @@ export function HouseholdSetup() {
                       : "border-stone-200 bg-stone-50 text-stone-600 dark:border-neutral-700 dark:bg-neutral-950 dark:text-stone-300"
                   }`}
                 >
-                  {nextRole === "husband" ? "Husband" : "Wife"}
+                  {nextRole === "husband" ? "건빵" : "교빵"}
                 </button>
               ))}
             </div>
           </fieldset>
 
           <Button className="mt-5 w-full" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "저장 중" : mode === "create" ? "Household 만들기" : "Household 참여"}
+            {isSubmitting ? "저장 중" : mode === "create" ? "가계부 만들기" : "가계부 참여"}
           </Button>
 
           {error ? (
