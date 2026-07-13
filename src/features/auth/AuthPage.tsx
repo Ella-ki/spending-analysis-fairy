@@ -1,10 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { KeyRound, Mail, Sparkles, WandSparkles } from "lucide-react";
 import { Button } from "../../shared/components/Button";
 import { useAuth } from "./AuthProvider";
 
 type AuthStep = "email" | "code";
 type AuthStatus = "idle" | "sending" | "sent" | "verifying";
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export function AuthPage() {
   const { signInWithEmail, verifyEmailOtp } = useAuth();
@@ -13,6 +15,19 @@ export function AuthPage() {
   const [step, setStep] = useState<AuthStep>("email");
   const [status, setStatus] = useState<AuthStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
+
+  useEffect(() => {
+    if (resendSecondsLeft <= 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendSecondsLeft((current) => Math.max(current - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [resendSecondsLeft]);
 
   async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -23,6 +38,7 @@ export function AuthPage() {
       await signInWithEmail(email.trim());
       setStep("code");
       setStatus("sent");
+      setResendSecondsLeft(RESEND_COOLDOWN_SECONDS);
     } catch (caught) {
       setStatus("idle");
       setError(caught instanceof Error ? caught.message : "인증 코드를 보낼 수 없습니다.");
@@ -43,6 +59,10 @@ export function AuthPage() {
   }
 
   async function resendCode() {
+    if (resendSecondsLeft > 0) {
+      return;
+    }
+
     setError(null);
     setStatus("sending");
 
@@ -50,11 +70,14 @@ export function AuthPage() {
       await signInWithEmail(email.trim());
       setToken("");
       setStatus("sent");
+      setResendSecondsLeft(RESEND_COOLDOWN_SECONDS);
     } catch (caught) {
       setStatus("sent");
       setError(caught instanceof Error ? caught.message : "인증 코드를 다시 보낼 수 없습니다.");
     }
   }
+
+  const isResendDisabled = status === "sending" || resendSecondsLeft > 0;
 
   return (
     <main className="fairy-app-bg flex min-h-dvh items-center px-5 py-10 text-ink dark:text-stone-50">
@@ -71,11 +94,11 @@ export function AuthPage() {
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold text-mint">
             <Sparkles className="h-4 w-4 text-lavender" aria-hidden />
-            홈화면 앱에서 바로 로그인
+            우리집 소비 흐름 정리
           </p>
-          <h1 className="mt-2 text-4xl font-bold tracking-normal">메일의 6자리 코드를 여기에 입력해요.</h1>
+          <h1 className="mt-2 text-4xl font-bold tracking-normal">카드값, 할부, 월급까지 한눈에 봅니다.</h1>
           <p className="mt-4 text-sm leading-6 text-stone-600 dark:text-stone-300">
-            링크를 Safari로 열지 않고, 홈화면 앱 안에서 인증을 끝내 로그인 상태를 유지합니다.
+            현대카드 명세서를 올리면 이번 달 소비와 다음 할부 부담, 교빵과 건빵의 현금흐름을 함께 정리합니다.
           </p>
         </div>
 
@@ -138,10 +161,14 @@ export function AuthPage() {
               <button
                 type="button"
                 onClick={resendCode}
-                disabled={status === "sending"}
+                disabled={isResendDisabled}
                 className="min-h-10 rounded-lg border border-lavender/25 bg-white/70 px-3 text-sm font-semibold text-ink disabled:opacity-50 dark:bg-neutral-950/70 dark:text-stone-50"
               >
-                {status === "sending" ? "재전송 중" : "코드 다시 받기"}
+                {status === "sending"
+                  ? "재전송 중"
+                  : resendSecondsLeft > 0
+                    ? `${resendSecondsLeft}초 후 재전송`
+                    : "코드 다시 받기"}
               </button>
               <button
                 type="button"
@@ -150,6 +177,7 @@ export function AuthPage() {
                   setStatus("idle");
                   setToken("");
                   setError(null);
+                  setResendSecondsLeft(0);
                 }}
                 className="min-h-10 rounded-lg border border-lavender/25 bg-white/70 px-3 text-sm font-semibold text-ink dark:bg-neutral-950/70 dark:text-stone-50"
               >
