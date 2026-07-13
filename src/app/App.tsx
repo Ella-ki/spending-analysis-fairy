@@ -36,7 +36,7 @@ export function App() {
 }
 
 function AppRoutes() {
-  const { session, isLoading, isPasswordRecovery } = useAuth();
+  const { session, isLoading } = useAuth();
 
   if (!env.isSupabaseConfigured) {
     return <ConfigMissing />;
@@ -46,7 +46,7 @@ function AppRoutes() {
     return <LoadingScreen label="세션을 확인하고 있어요" />;
   }
 
-  if (!session || isPasswordRecovery) {
+  if (!session) {
     return <AuthPage />;
   }
 

@@ -6,12 +6,7 @@ import { supabase } from "../../lib/supabase";
 type AuthContextValue = {
   session: Session | null;
   isLoading: boolean;
-  isPasswordRecovery: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (email: string, password: string) => Promise<void>;
-  sendPasswordReset: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
-  clearPasswordRecovery: () => void;
   signOut: () => Promise<void>;
 };
 
@@ -24,7 +19,6 @@ type AuthProviderProps = {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -39,15 +33,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsPasswordRecovery(true);
-      }
-
-      if (event === "SIGNED_OUT") {
-        setIsPasswordRecovery(false);
-      }
-
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setIsLoading(false);
     });
@@ -62,7 +48,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     () => ({
       session,
       isLoading,
-      isPasswordRecovery,
       async signInWithPassword(email: string, password: string) {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -73,46 +58,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           throw error;
         }
       },
-      async signUpWithPassword(email: string, password: string) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) {
-          throw error;
-        }
-      },
-      async sendPasswordReset(email: string) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin,
-        });
-
-        if (error) {
-          throw error;
-        }
-      },
-      async updatePassword(password: string) {
-        const { error } = await supabase.auth.updateUser({ password });
-
-        if (error) {
-          throw error;
-        }
-
-        setIsPasswordRecovery(false);
-      },
-      clearPasswordRecovery() {
-        setIsPasswordRecovery(false);
-      },
       async signOut() {
         const { error } = await supabase.auth.signOut();
-        setIsPasswordRecovery(false);
         if (error) {
           throw error;
         }
       },
     }),
-    [isLoading, isPasswordRecovery, session],
+    [isLoading, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
