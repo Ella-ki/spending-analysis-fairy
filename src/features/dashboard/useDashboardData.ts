@@ -85,15 +85,8 @@ export function useDashboardData(householdId?: string) {
       const currentMonth = startOfMonth(new Date());
       const since = `${toMonthKey(addMonths(currentMonth, -11))}-01`;
 
-      const [transactionsResult, goalResult, cashflow] = await Promise.all([
-        supabase
-          .from("transactions")
-          .select(
-            "id,household_id,statement_id,transaction_date,merchant_raw,merchant_normalized,amount,payment_type,installment_months,installment_current_round,installment_remaining_amount,approval_number,category_id,special_flag,is_fixed,categories(id,name,color,icon),statements!inner(period_month)",
-          )
-          .eq("household_id", householdId)
-          .gte("statements.period_month", since)
-          .order("transaction_date", { ascending: false }),
+      const [transactionRows, goalResult, cashflow] = await Promise.all([
+        fetchDashboardTransactions(householdId, since),
         supabase
           .from("goals")
           .select("id,household_id,goal_key,target_amount,starts_on,ends_on")
@@ -105,15 +98,11 @@ export function useDashboardData(householdId?: string) {
         fetchDashboardCashflow(householdId, currentMonth),
       ]);
 
-      if (transactionsResult.error) {
-        throw transactionsResult.error;
-      }
-
       if (goalResult.error) {
         throw goalResult.error;
       }
 
-      const transactions = normalizeTransactions((transactionsResult.data ?? []) as unknown as TransactionRow[]);
+      const transactions = normalizeTransactions(transactionRows);
       const goal = goalResult.data ? normalizeGoal(goalResult.data as GoalRow) : null;
 
       return buildDashboardData(transactions, goal, currentMonth, cashflow);
@@ -190,6 +179,45 @@ function buildDashboardData(transactions: Transaction[], goal: Goal | null, curr
   };
 }
 
+
+async function fetchDashboardTransactions(householdId: string, since: string): Promise<TransactionRow[]> {
+  const baseSelect =
+    "id,household_id,statement_id,transaction_date,merchant_raw,merchant_normalized,amount,payment_type,installment_months,approval_number,category_id,special_flag,is_fixed,categories(id,name,color,icon),statements!inner(period_month)";
+  const installmentSelect =
+    "id,household_id,statement_id,transaction_date,merchant_raw,merchant_normalized,amount,payment_type,installment_months,installment_current_round,installment_remaining_amount,approval_number,category_id,special_flag,is_fixed,categories(id,name,color,icon),statements!inner(period_month)";
+
+  const result = await supabase
+    .from("transactions")
+    .select(installmentSelect)
+    .eq("household_id", householdId)
+    .gte("statements.period_month", since)
+    .order("transaction_date", { ascending: false });
+
+  if (!result.error) {
+    return (result.data ?? []) as unknown as TransactionRow[];
+  }
+
+  if (!isMissingInstallmentColumnError(result.error.message)) {
+    throw result.error;
+  }
+
+  const fallback = await supabase
+    .from("transactions")
+    .select(baseSelect)
+    .eq("household_id", householdId)
+    .gte("statements.period_month", since)
+    .order("transaction_date", { ascending: false });
+
+  if (fallback.error) {
+    throw fallback.error;
+  }
+
+  return (fallback.data ?? []) as unknown as TransactionRow[];
+}
+
+function isMissingInstallmentColumnError(message: string) {
+  return message.includes("installment_current_round") || message.includes("installment_remaining_amount");
+}
 function normalizeTransactions(rows: TransactionRow[]): Transaction[] {
   return rows.map((row) => {
     const { categories, statements, ...transaction } = row;
