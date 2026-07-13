@@ -6,8 +6,8 @@ import { supabase } from "../../lib/supabase";
 type AuthContextValue = {
   session: Session | null;
   isLoading: boolean;
-  signInWithEmail: (email: string) => Promise<void>;
-  verifyEmailOtp: (email: string, token: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -49,23 +49,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     () => ({
       session,
       isLoading,
-      async signInWithEmail(email: string) {
-        const { error } = await supabase.auth.signInWithOtp({
+      async signInWithPassword(email: string, password: string) {
+        const { error } = await supabase.auth.signInWithPassword({
           email,
-          options: {
-            shouldCreateUser: true,
-          },
+          password,
         });
 
         if (error) {
           throw error;
         }
       },
-      async verifyEmailOtp(email: string, token: string) {
-        const { error } = await supabase.auth.verifyOtp({
+      async signUpWithPassword(email: string, password: string) {
+        const { error } = await supabase.auth.signUp({
           email,
-          token,
-          type: "email",
+          password,
         });
 
         if (error) {
