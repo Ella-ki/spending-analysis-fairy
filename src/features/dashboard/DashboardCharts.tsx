@@ -25,8 +25,6 @@ type DashboardChartsProps = {
   topMerchants: ChartDatum[];
   topCategories: ChartDatum[];
   installmentTrend: ChartDatum[];
-  coffeeTrend: ChartDatum[];
-  coupangTrend: ChartDatum[];
 };
 
 export function DashboardCharts(props: DashboardChartsProps) {
@@ -103,29 +101,6 @@ export function DashboardCharts(props: DashboardChartsProps) {
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <ChartCard title="커피 흐름">
-          <ResponsiveContainer width="100%" height={190}>
-            <LineChart data={props.coffeeTrend} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
-              <YAxis hide />
-              <Tooltip formatter={(value) => formatKrw(Number(value))} />
-              <Line type="monotone" dataKey="amount" stroke="#D7A83F" strokeWidth={3} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-        <ChartCard title="쿠팡 흐름">
-          <ResponsiveContainer width="100%" height={190}>
-            <LineChart data={props.coupangTrend} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-              <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
-              <YAxis hide />
-              <Tooltip formatter={(value) => formatKrw(Number(value))} />
-              <Line type="monotone" dataKey="amount" stroke="#D7A83F" strokeWidth={3} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
     </section>
   );
 }

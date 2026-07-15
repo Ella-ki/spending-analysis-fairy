@@ -90,5 +90,11 @@ export type HomeLoanPayment = {
   month: string;
   label: string;
   amount: number;
+  bank_name: string;
+  loan_account_mask: string | null;
+  balance_amount: number | null;
+  due_date: string | null;
+  principal_amount: number | null;
+  interest_amount: number | null;
   notes: string | null;
 };

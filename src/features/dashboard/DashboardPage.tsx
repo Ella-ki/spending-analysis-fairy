@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import { Banknote, Sparkles, UploadCloud, WandSparkles } from "lucide-react";
+import { CalendarClock, Sparkles, UploadCloud } from "lucide-react";
 import { useCategories } from "../categories/useCategories";
 import { useHousehold } from "../household/useHousehold";
 import { TransactionCategoryPicker } from "../merchantRules/TransactionCategoryPicker";
@@ -9,7 +9,7 @@ import { EmptyState } from "../../shared/components/EmptyState";
 import { LoadingScreen } from "../../shared/components/LoadingScreen";
 import { formatKrw, formatPercent } from "../../lib/format";
 import { MetricCard } from "./MetricCard";
-import { useDashboardData } from "./useDashboardData";
+import { useDashboardData, type ChartDatum } from "./useDashboardData";
 
 const DashboardCharts = lazy(() => import("./DashboardCharts").then((module) => ({ default: module.DashboardCharts })));
 
@@ -26,7 +26,7 @@ export function DashboardPage() {
   if (dashboardQuery.error) {
     return (
       <EmptyState
-        title="대시보드를 불러오지 못했습니다"
+        title="대시보드를 불러오지 못했어요"
         description={dashboardQuery.error.message}
         action={
           <Button type="button" onClick={() => dashboardQuery.refetch()}>
@@ -71,7 +71,10 @@ export function DashboardPage() {
       <section>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="flex items-center gap-2 text-sm font-semibold text-mint"><Sparkles className="h-4 w-4 text-lavender" aria-hidden />이번 달</p>
+            <p className="flex items-center gap-2 text-sm font-semibold text-mint">
+              <Sparkles className="h-4 w-4 text-lavender" aria-hidden />
+              이번 달
+            </p>
             <h2 className="mt-1 text-3xl font-bold tracking-normal">이번 달 소비 상태</h2>
           </div>
           <Link
@@ -87,7 +90,9 @@ export function DashboardPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase text-stone-500 dark:text-stone-400">목표 진행률</p>
-              <p className="mt-1 text-xl font-bold">{formatKrw(metrics.actualSpending)} / {formatKrw(metrics.targetAmount)}</p>
+              <p className="mt-1 text-xl font-bold">
+                {formatKrw(metrics.actualSpending)} / {formatKrw(metrics.targetAmount)}
+              </p>
             </div>
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-gold to-petal text-xl font-bold text-white shadow-fairy">
               {metrics.monthlyScore}
@@ -108,7 +113,6 @@ export function DashboardPage() {
       <section className="grid grid-cols-2 gap-3">
         <MetricCard label="총 카드값" value={formatKrw(metrics.totalCardBill, true)} />
         <MetricCard label="실제 소비" value={formatKrw(metrics.actualSpending, true)} tone={metrics.remainingBudget >= 0 ? "good" : "bad"} />
-        <MetricCard label="할부 금액" value={formatKrw(metrics.installmentAmount, true)} />
         <MetricCard label="고정비" value={formatKrw(metrics.fixedExpenses, true)} />
         <MetricCard label="변동비" value={formatKrw(metrics.variableExpenses, true)} />
         <MetricCard
@@ -116,7 +120,10 @@ export function DashboardPage() {
           value={formatKrw(metrics.remainingBudget, true)}
           tone={metrics.remainingBudget >= 0 ? "good" : "bad"}
         />
+        <MetricCard label="주택대출 반영 후" value={formatKrw(metrics.cashAfterLoans, true)} tone={metrics.cashAfterLoans >= 0 ? "good" : "bad"} />
       </section>
+
+      <InstallmentForecast forecast={data.installmentForecast} />
 
       <Suspense fallback={<div className="fairy-card rounded-lg border p-4 text-sm text-stone-500">차트를 불러오는 중</div>}>
         <DashboardCharts
@@ -125,8 +132,6 @@ export function DashboardPage() {
           topMerchants={data.topMerchants}
           topCategories={data.topCategories}
           installmentTrend={data.installmentTrend}
-          coffeeTrend={data.coffeeTrend}
-          coupangTrend={data.coupangTrend}
         />
       </Suspense>
 
@@ -134,7 +139,7 @@ export function DashboardPage() {
         <div className="mb-3">
           <h3 className="text-lg font-bold tracking-normal">가맹점 규칙 학습</h3>
           <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
-            카테고리를 바꾸면 같은 가맹점의 다음 가져오기에 자동 적용됩니다.
+            카테고리를 바꾸면 같은 가맹점은 다음 가져오기부터 자동 적용됩니다.
           </p>
         </div>
 
@@ -157,29 +162,40 @@ export function DashboardPage() {
     </div>
   );
 }
-function buildAiInsights(data: NonNullable<ReturnType<typeof useDashboardData>["data"]>) {
-  const metrics = data.metrics;
-  const insights: string[] = [];
 
-  if (metrics.incomeTotal > 0) {
-    insights.push(
-      `이번 달 월급 ${formatKrw(metrics.incomeTotal)} 중 카드 소비와 주택 대출을 반영하면 ${formatKrw(metrics.cashAfterLoans)}이 남는 흐름입니다.`,
-    );
-  } else {
-    insights.push("월급 입금액을 입력하면 카드값과 주택 대출을 뺀 실제 잔여 현금을 계산할 수 있어요.");
-  }
+function InstallmentForecast({ forecast }: { forecast: ChartDatum[] }) {
+  const baseMonth = forecast[0]?.name ? formatForecastMonth(forecast[0].name) : "이번 달";
 
-  if (metrics.futureInstallmentTotal > 0) {
-    insights.push(`앞으로 3개월 안에 잡힌 할부 예정액은 ${formatKrw(metrics.futureInstallmentTotal)}입니다. 큰 지출 전에는 이 금액을 먼저 고정비처럼 보고 판단하는 편이 좋아요.`);
-  } else {
-    insights.push("현재 데이터 기준으로 다음 3개월 할부 부담은 크지 않습니다.");
-  }
+  return (
+    <section className="fairy-card rounded-lg border p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-lavender/15 text-lavender">
+          <CalendarClock className="h-5 w-5" aria-hidden />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">할부 예정 금액</p>
+          <h3 className="mt-1 text-lg font-bold tracking-normal">{baseMonth} 기준 3개월 할부 흐름</h3>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
+            현재 명세서의 할부 회차와 잔액을 기준으로 이번 달부터 다음 두 달까지의 부담을 나눠 봅니다.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {forecast.map((datum) => (
+          <article key={datum.name} className="rounded-lg border border-lavender/20 bg-white/65 p-3 dark:bg-neutral-950/65">
+            <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">{formatForecastMonth(datum.name)}</p>
+            <p className="mt-2 break-words text-base font-black tracking-normal text-ink dark:text-stone-50">
+              {formatKrw(datum.amount, true)}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-  if (metrics.targetProgress > 1) {
-    insights.push(`생활비 목표를 ${formatPercent(metrics.targetProgress)} 사용했습니다. 다음 소비는 변동비보다 고정/대출 이후 잔액 기준으로 보는 게 안전합니다.`);
-  } else {
-    insights.push(`생활비 목표 대비 ${formatPercent(metrics.targetProgress)} 사용 중입니다. 아직 목표 안쪽에 있어요.`);
-  }
-
-  return insights;
+function formatForecastMonth(name: string) {
+  const month = name.includes(".") ? name.split(".")[1] : name.slice(5, 7);
+  const parsed = Number(month);
+  return Number.isFinite(parsed) && parsed > 0 ? `${parsed}월` : name;
 }

@@ -387,7 +387,7 @@ function normalizeHomeLoanPayment(row: HomeLoanPaymentRow): HomeLoanPayment {
 }
 
 function buildInstallmentForecast(currentMonthTransactions: Transaction[], currentMonth: Date) {
-  const months = [1, 2, 3].map((offset) => toMonthKey(addMonths(currentMonth, offset)));
+  const months = [0, 1, 2].map((offset) => toMonthKey(addMonths(currentMonth, offset)));
   const amounts = new Map(months.map((month) => [month, 0]));
 
   currentMonthTransactions
@@ -397,7 +397,12 @@ function buildInstallmentForecast(currentMonthTransactions: Transaction[], curre
       const currentRound = transaction.installment_current_round ?? 1;
 
       months.forEach((month, index) => {
-        const nextInstallmentNumber = currentRound + index + 1;
+        if (index === 0) {
+          amounts.set(month, (amounts.get(month) ?? 0) + transaction.amount);
+          return;
+        }
+
+        const nextInstallmentNumber = currentRound + index;
         if (nextInstallmentNumber > transaction.installment_months) {
           return;
         }
