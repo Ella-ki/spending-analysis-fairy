@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Banknote, CalendarDays, Home, Landmark, Save } from "lucide-react";
 import { addMonths, monthLabel, startOfMonth, toMonthKey } from "../../lib/dates";
-import { formatKrw } from "../../lib/format";
+import { formatKrw, formatNumber } from "../../lib/format";
 import { Button } from "../../shared/components/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { LoadingScreen } from "../../shared/components/LoadingScreen";
@@ -240,11 +240,13 @@ function MoneyInput({ label, value, onChange }: { label: string; value: number; 
     <label className="block text-sm font-semibold">
       {label}
       <input
-        type="number"
-        min="0"
-        step="1000"
-        value={value || ""}
-        onChange={(event) => onChange(Number(event.target.value || 0))}
+        type="text"
+        inputMode="numeric"
+        value={value ? formatNumber(value) : ""}
+        onChange={(event) => {
+          const numericValue = event.target.value.replace(/[^0-9]/g, "");
+          onChange(Number(numericValue || 0));
+        }}
         className="mt-2 min-h-12 w-full rounded-lg border border-lavender/25 bg-white/70 px-3 text-base outline-none dark:border-lavender/20 dark:bg-neutral-950/70"
         placeholder="0"
       />

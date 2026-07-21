@@ -1,16 +1,21 @@
-export function formatKrw(value: number, compact = false) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-    maximumFractionDigits: 0,
-    notation: compact ? "compact" : "standard",
-  }).format(Math.round(value));
+const krwFormatter = new Intl.NumberFormat("ko-KR", {
+  style: "currency",
+  currency: "KRW",
+  maximumFractionDigits: 0,
+});
+
+const numberFormatter = new Intl.NumberFormat("ko-KR", {
+  maximumFractionDigits: 0,
+});
+
+export function formatKrw(value: number, _compact = false) {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return krwFormatter.format(Math.round(safeValue));
 }
 
 export function formatNumber(value: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    maximumFractionDigits: 0,
-  }).format(Math.round(value));
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return numberFormatter.format(Math.round(safeValue));
 }
 
 export function formatPercent(value: number) {
