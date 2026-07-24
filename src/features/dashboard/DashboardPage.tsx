@@ -9,6 +9,7 @@ import { EmptyState } from "../../shared/components/EmptyState";
 import { LoadingScreen } from "../../shared/components/LoadingScreen";
 import { formatKrw, formatPercent } from "../../lib/format";
 import { MetricCard } from "./MetricCard";
+import type { Transaction } from "../../shared/types";
 import { useDashboardData, type ChartDatum } from "./useDashboardData";
 
 const DashboardCharts = lazy(() => import("./DashboardCharts").then((module) => ({ default: module.DashboardCharts })));
@@ -64,7 +65,9 @@ export function DashboardPage() {
 
   const metrics = data.metrics;
   const categories = categoriesQuery.data ?? [];
-  const recentTransactions = data.currentMonthTransactions.slice(0, 8);
+  const recentTransactions = data.currentMonthTransactions
+    .filter((transaction) => !isCardIssuerDiscount(transaction))
+    .slice(0, 8);
 
   return (
     <div className="flex flex-col gap-7">
@@ -161,6 +164,12 @@ export function DashboardPage() {
       </section>
     </div>
   );
+}
+
+
+function isCardIssuerDiscount(transaction: Transaction) {
+  const merchantText = `${transaction.merchant_raw} ${transaction.merchant_normalized}`.toLowerCase();
+  return merchantText.includes("zero") && merchantText.includes("할인");
 }
 
 function InstallmentForecast({ forecast }: { forecast: ChartDatum[] }) {
