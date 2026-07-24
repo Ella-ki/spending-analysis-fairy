@@ -40,28 +40,46 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
   const parsedFile = await parseHyundaiStatementFile(file);
   const parsedRows = parsedFile.transactions;
   const periodMonth = parsedFile.statementMonth ?? inferStatementMonth(parsedRows);
+  const periodDate = `${periodMonth}-01`;
   const checksum = parsedFile.checksum;
   const totalAmount = parsedRows.reduce((sum, row) => sum + row.amount, 0);
+  const storagePath = `${householdId}/${periodMonth}/${Date.now()}-${safeFileName(file.name)}`;
 
-  const { data: existingStatement, error: existingError } = await supabase
+  const { data: existingStatements, error: existingError } = await supabase
     .from("statements")
-    .select("id,period_month,row_count,total_amount")
+    .select("id,checksum")
     .eq("household_id", householdId)
-    .eq("checksum", checksum)
-    .maybeSingle();
+    .eq("period_month", periodDate)
+    .order("imported_at", { ascending: false });
 
   if (existingError) {
     throw existingError;
   }
 
-  if (existingStatement) {
-    const statementId = String(existingStatement.id);
+  if (existingStatements && existingStatements.length > 0) {
+    const statementIds = existingStatements.map((statement) => String(statement.id));
+    const primaryStatement = existingStatements.find((statement) => statement.checksum === checksum) ?? existingStatements[0];
+    const statementId = primaryStatement ? String(primaryStatement.id) : null;
+
+    if (!statementId) {
+      throw new Error("Could not find the existing statement.");
+    }
+
+    const upload = await supabase.storage.from("statements").upload(storagePath, file, {
+      cacheControl: "31536000",
+      contentType: file.type || inferContentType(file.name),
+      upsert: false,
+    });
+
+    if (upload.error) {
+      throw upload.error;
+    }
 
     const deleteResult = await supabase
       .from("transactions")
       .delete()
       .eq("household_id", householdId)
-      .eq("statement_id", statementId);
+      .in("statement_id", statementIds);
 
     if (deleteResult.error) {
       throw deleteResult.error;
@@ -70,9 +88,14 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
     const updateResult = await supabase
       .from("statements")
       .update({
-        period_month: `${periodMonth}-01`,
+        uploaded_by: userId,
+        period_month: periodDate,
+        original_file_name: file.name,
+        storage_path: storagePath,
+        checksum,
         row_count: parsedRows.length,
         total_amount: totalAmount,
+        imported_at: new Date().toISOString(),
       })
       .eq("id", statementId)
       .eq("household_id", householdId);
@@ -90,7 +113,7 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
       userId,
       categories,
       rules,
-      checksum,
+      periodMonth,
     });
 
     return {
@@ -103,7 +126,6 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
     };
   }
 
-  const storagePath = `${householdId}/${periodMonth}/${Date.now()}-${safeFileName(file.name)}`;
   const upload = await supabase.storage.from("statements").upload(storagePath, file, {
     cacheControl: "31536000",
     contentType: file.type || inferContentType(file.name),
@@ -119,7 +141,7 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
     .insert({
       household_id: householdId,
       uploaded_by: userId,
-      period_month: `${periodMonth}-01`,
+      period_month: periodDate,
       original_file_name: file.name,
       storage_path: storagePath,
       checksum,
@@ -143,7 +165,7 @@ export async function importHyundaiStatement({ file, householdId, userId }: Impo
     userId,
     categories,
     rules,
-    checksum,
+    periodMonth,
   });
 
   const insertedRows = await insertTransactions(inserts);
@@ -216,16 +238,16 @@ async function buildTransactionInserts(input: {
   userId: string;
   categories: Category[];
   rules: MerchantRule[];
-  checksum: string;
+  periodMonth: string;
 }) {
-  const { rows, householdId, statementId, userId, categories, rules, checksum } = input;
+  const { rows, householdId, statementId, userId, categories, rules, periodMonth } = input;
 
   return Promise.all(
     rows.map(async (row, index): Promise<TransactionInsert> => {
       const classification = classifyTransaction(row, categories, rules);
       const source = row.approvalNumber
         ? `${row.approvalNumber}|${row.transactionDate}|${row.merchantNormalized}`
-        : `${checksum}|${index}|${row.transactionDate}|${row.merchantNormalized}`;
+        : `${periodMonth}|${index}|${row.transactionDate}|${row.merchantNormalized}|${row.amount}`;
 
       return {
         household_id: householdId,
